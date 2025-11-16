@@ -1,4 +1,5 @@
 #include "IndSensorMap.hpp"
+#include <Arduino.h>
 #include <math.h>
 
 // Sensor calibration data
@@ -7,7 +8,24 @@ IndSensorMap ind1Map = {-4.831976283950702, 885.9877001844566, 0.279328461810928
 IndSensorMap ind2Map = {-9.824360913609562, 871.4744633266955, 0.2909366235093304, 4.3307594408159495, 0.2822807132259202};
 IndSensorMap ind3Map = {-13.891292062248292, 990.6819962477331, 0.16376045588859353, -0.074904004740735, 0.17727132893449118};
 
+// IndSensor class implementation
+IndSensor::IndSensor(IndSensorMap calibration, uint8_t analogPin)
+  : consts(calibration), pin(analogPin), oor(false) {}
+
 // Convert raw analog reading to millimeters using sensor calibration
-float indToMM(IndSensorMap ind, unsigned int raw) {
-  return ind.C - (1.0 / ind.B) * log(pow((ind.K - ind.A) / ((float)raw - ind.A), ind.v) - 1.0);
+float IndSensor::toMM(unsigned int raw) {
+  return consts.C - (1.0 / consts.B) * log(pow((consts.K - consts.A) / ((float)raw - consts.A), consts.v) - 1.0);
 }
+
+// Read sensor directly from pin and convert to millimeters
+float IndSensor::read() {
+  unsigned int raw = analogRead(pin);
+  oor = (raw == 0 || raw > 870);  // Update out-of-range flag
+  return toMM(raw);
+}
+
+// Predefined sensor instances
+IndSensor indL(ind1Map, A0);
+IndSensor indR(ind0Map, A1);
+IndSensor indF(ind3Map, A5);
+IndSensor indB(ind2Map, A4);

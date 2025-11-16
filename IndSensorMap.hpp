@@ -10,13 +10,28 @@ typedef struct IndSensorMap {
   double v;
 } IndSensorMap;
 
-// Predefined sensor calibrations
-extern IndSensorMap ind0Map;
-extern IndSensorMap ind1Map;
-extern IndSensorMap ind2Map;
-extern IndSensorMap ind3Map;
+class IndSensor {
+public:
+  bool oor;
+  int mmVal;
 
-// Convert raw analog reading to millimeters using sensor calibration
-float indToMM(IndSensorMap ind, unsigned int raw);
+  // Constructor
+  IndSensor(IndSensorMap calibration, uint8_t analogPin);
+  // Read sensor directly from pin and convert to millimeters
+  float read();
+
+private:
+  IndSensorMap consts;
+  uint8_t pin;
+
+  // Read sensor and convert to millimeters
+  float toMM(unsigned int raw);
+};
+
+// sensor instances
+extern IndSensor indL;
+extern IndSensor indR;
+extern IndSensor indF;
+extern IndSensor indB;
 
 #endif // IND_SENSOR_MAP_HPP

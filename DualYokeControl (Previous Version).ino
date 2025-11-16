@@ -3,9 +3,6 @@
 
 // PIN MAPPING
 
-#define indL A0
-#define indR A1
-
 #define dirFR 2
 #define pwmFR 3
 #define dirBR 4
@@ -17,25 +14,15 @@
 
 // variables
 
-int dist_raw, tprior, telapsed, pwm, pwm2, oor, oor2, dist2_raw;
+int dist_raw, tprior, telapsed, pwm, pwm2, dist2_raw;
+bool oor, oor2;
 float dist,ecurr, eprior, derror, ecum, ff,dist2,ecurr2, eprior2, derror2, ecum2, ff2;
 
 #define CAP 200
 
 
 // CONTROLLER CONSTANTS
-
-float ki, kd, K;
 float MAX_INTEGRAL_TERM = 1e4;
-
-const float ref = 21.0; //14.9;
-const float ref2 = 22.0; //14.9;
-
-const float refL = (ref + ref2) / 2;
-const float refR = refL;
-
-const float K_current = 1;
-const float ki_current = 0;
 
 //// FOR MC 1
 //const float K_f = 50; // gain for when we want to fall (ref > dist or error > 0)
@@ -46,24 +33,44 @@ const float ki_current = 0;
 //const float ki_a = ki_f;
 //const float kd_a = 10; //30;
 
-// FOR MC 1
-const float K_f = 40; // gain for when we want to fall (ref > dist or error > 0)
-const float ki_f = 0.01;
-const float kd_f = 7; // 25
+typedef struct Constants {
+  float K;
+  float ki;
+  float kd;
+} Constants;
 
-const float K_a = 20;
-const float ki_a = ki_f;
-const float kd_a = 20; //30;
+typedef struct K_MAP {
+  Constants falling;
+  Constants attracting;
+} K_MAP;
 
-// FOR MC 2
+typedef struct Collective {
+  K_MAP constants;
+  float e;
+  float eDiff;
+  float eInt;
+  float ref;
+} Collective;
 
-const float K2_f = K_f;// gain for when we want to fall (ref > dist or error > 0)
-const float ki2_f = ki_f;
-const float kd2_f = kd_f;
+Collective collLeft = {{{40, 0.01, 7}, {20, 0.01, 20}}, 0, 0, 0, 21.0};
+Collective collRight = {{{40, 0.01, 7}, {20, 0.01, 20}}, 0, 0, 0, 22.0};
 
-const float K2_a = K_a;
-const float ki2_a = ki_a;
-const float kd2_a = kd_a;
+int levCollective(Collective collective, bool oor){
+  if (oor){
+    pwm = 0;
+  }
+  else{
+    Constants pidConsts;
+
+    // this means that dist > ref so we gotta attract to track now vv
+    if (collective.e < 0) pidConsts = collective.constants.attracting;
+    // this is falling vv
+    else pidConsts = collective.constants.falling;
+
+    pwm = constrain(pidConsts.K*(collective.e + pidConsts.ki*collective.eInt + pidConsts.kd*collective.eDiff), -CAP,CAP);
+  }
+  return (int)pwm;
+}
 
 #define sampling_rate 1000
 const int dt_micros = 1e6/sampling_rate;
@@ -86,14 +93,11 @@ void setup() {
 
   // ATTRACT IS B  // REPEL IS A
 
-
   //when error is negative, I want to attract.
   send_pwmFL(0);
   send_pwmFR(0);
 
 }
-
-
 
 void loop() {
   if (Serial.available() > 0) {
@@ -113,6 +117,10 @@ void loop() {
 
   if (telapsed >= dt_micros){
     // put your main code here, to run repeatedly:
+    indL.read();
+    indR.read();
+    indF.read();
+    indB.read();
     dist_raw = analogRead(indL);
     if (dist_raw > 870) oor = true;
     dist = indToMM(ind0Map, dist_raw); // 189->950, 16->26
@@ -138,8 +146,7 @@ void loop() {
 
     
     if (ON) {
-      int collective1 = levitate(ecurr, derror, ecum, oor);
-      int collective2 = levitate2(ecurr2, derror2, ecum2, oor2);
+      int collective1 = 
       send_pwmFL(pwm);
       send_pwmFR(pwm2);
       Serial.print(pwm);
@@ -168,51 +175,6 @@ void loop() {
   }
 
   //Serial.println(telapsed);
-}
-
-int levitate(float e, float de, float ecum, int oor){
-  if (oor){
-    pwm = 0;
-  }
-  else{
-    if (e < 0) { // this means that dist > ref so we gotta attract to track now
-      kd = kd_a;
-      ki = ki_a;
-      K = K_a;
-    }
-    else{
-      kd = kd_f;
-      ki = ki_f;
-      K = K_f;
-    }
-
-    pwm = constrain(K*(e + ki*ecum + kd*de), -CAP,CAP);
-
-  }
-  return (int)pwm;
-}
-
-int levitate2(float e, float de, float ecunm, int oor){
-  if (oor){
-    pwm2 = 0;
-  }
-  else{
-    if (e < 0) { // this means that dist > ref so we gotta attract to track now
-      kd = kd2_a;
-      ki = ki2_a;
-      K = K2_a;
-    }
-    else{
-      kd = kd2_f;
-      ki = ki2_f;
-      K = K2_f;
-    }
-
-    pwm2 = constrain(K*(e + ki*ecum + kd*de), -CAP,CAP);
-
-  }
-  return (int)pwm2;
-
 }
 
 void send_pwmFL(int val){
