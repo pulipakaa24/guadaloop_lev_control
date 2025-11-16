@@ -114,13 +114,13 @@ void loop() {
   if (telapsed >= dt_micros){
     // put your main code here, to run repeatedly:
     dist_raw = analogRead(indL);
-    if (dist_raw > 900) oor = true;
+    if (dist_raw > 870) oor = true;
     dist = ind2mm(ind0Map, dist_raw); // 189->950, 16->26
     Serial.print(dist);
     Serial.print(", ");
 
     dist2_raw = analogRead(indR);
-    if (dist2_raw > 900) oor2 = true;
+    if (dist2_raw > 870) oor2 = true;
     dist2 = ind2mm(ind1Map, dist2_raw);
     Serial.print(dist2);
     Serial.print(", ");
