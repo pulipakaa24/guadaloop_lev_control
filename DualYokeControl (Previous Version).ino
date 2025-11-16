@@ -3,22 +3,22 @@
 
 // PIN MAPPING
 
-const int distPin = A1;
-const int pwmPin = 6;
-const int dirPin = 7;
-const int dir2Pin = 4;
-const int pwm2Pin = 3;
-const int dist2Pin = A2;
+#define distPin A1
+#define pwmPin 6
+#define dirPin 7
+#define dir2Pin 4
+#define pwm2Pin 3
+#define dist2Pin A2
 
-const int range2Pin = A4;
-const int rangePin = A3;
+#define range2Pin A4
+#define rangePin A3
 
 // variables
 
 int dist_raw, tcurr, tprior, telapsed, pwm, pwm2, oor, oor2, dist2_raw;
 float dist,ecurr, eprior, derror, ecum, ff,dist2,ecurr2, eprior2, derror2, ecum2, ff2;
 
-const int CAP = 200;
+#define CAP 200
 
 
 // CONTROLLER CONSTANTS
@@ -63,7 +63,7 @@ const float K2_a = K_a;
 const float ki2_a = ki_a;
 const float kd2_a = kd_a;
 
-const int sampling_rate = 1000;
+#define sampling_rate 1000
 const int dt_micros = 1e6/sampling_rate;
 
 #define LEV_ON
