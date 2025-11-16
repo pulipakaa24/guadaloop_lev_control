@@ -130,6 +130,11 @@ void loop() {
 
     ecurr2 = ref2 - dist2;
     derror2 = ecurr2 - eprior2;
+    
+    ecum += ecurr * (telapsed / 1e6);
+    ecum = constrain(ecum, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
+    ecum2 += ecurr2 * (telapsed / 1e6);
+    ecum2 = constrain(ecum2, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
 
     
     if (ON) {
