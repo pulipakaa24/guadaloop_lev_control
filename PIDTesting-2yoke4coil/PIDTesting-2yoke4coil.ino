@@ -60,12 +60,11 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {
-    String inputString = Serial.readStringUntil('\n');  // Read the full input
-    inputString.trim();  // Remove leading/trailing whitespace, including \n and \r
+    // this might need to be changed if we have trouble getting serial to read. 
+    char c = Serial.read();
+    while(Serial.available()) Serial.read(); // flush remaining
 
-    // determine whether control is on or off based on serial input.
-    if (inputString == "0") controller.outputOn=0;
-    else controller.outputOn=1;
+    controller.outputOn = (c != '0');
   }
   
   tDiffMicros = micros() - tprior;

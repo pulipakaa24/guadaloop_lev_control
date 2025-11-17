@@ -100,6 +100,6 @@ class FullController {
     int16_t FRPrev;
     int16_t BRPrev;
 
-    unsigned int tDiff;
+    float tDiff;
 };
 #endif // CONTROLLER_HPP

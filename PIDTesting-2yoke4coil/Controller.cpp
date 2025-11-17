@@ -58,10 +58,10 @@ void FullController::sendOutputs() {
 }
 
 void FullController::avgControl() {
-  float avg = (Left.mmVal + Right.mmVal + Front.mmVal + Back.mmVal) / 4.0;
-  float eCurr = AvgRef - avg; // assuming up is positive and down is negative
+  float avg = (Left.mmVal + Right.mmVal + Front.mmVal + Back.mmVal) * 0.25f;
+  float eCurr = AvgRef - avg;
 
-  avgError.eDiff = (tDiff == 0) ? 0:(eCurr - avgError.e) / tDiff; // rise over run
+  avgError.eDiff = (tDiff == 0.0) ? 0:(eCurr - avgError.e) / tDiff; // rise over run
   avgError.eInt += eCurr * tDiff;
   avgError.eInt = constrain(avgError.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
   avgError.e = eCurr;
@@ -74,7 +74,7 @@ void FullController::LRControl() {
   float eCurr = diff - LRDiffRef; // how different is that from the reference? positive -> Left repels, Right attracts.
   K_MAP rConsts = {LConsts.attracting, LConsts.repelling}; // apply attracting to repelling and vice versa.
 
-  LRDiffErr.eDiff = (tDiff == 0) ? 0:(eCurr - LRDiffErr.e) / tDiff;
+  LRDiffErr.eDiff = (tDiff == 0.0) ? 0:(eCurr - LRDiffErr.e) / tDiff;
   LRDiffErr.eInt += eCurr * tDiff;
   LRDiffErr.eInt = constrain(LRDiffErr.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
   LRDiffErr.e = eCurr;
@@ -88,7 +88,7 @@ void FullController::FBControl() {
   float eCurr = diff - FBDiffRef; // how different is that from ref? pos.->Front must repel, Back must attract
   K_MAP bConsts = {FConsts.attracting, FConsts.repelling};
 
-  FBDiffErr.eDiff = (tDiff == 0) ? 0:(eCurr - FBDiffErr.e) / tDiff;
+  FBDiffErr.eDiff = (tDiff == 0.0) ? 0:(eCurr - FBDiffErr.e) / tDiff;
   FBDiffErr.eInt += eCurr * tDiff;
   FBDiffErr.eInt = constrain(FBDiffErr.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
   FBDiffErr.e = eCurr;

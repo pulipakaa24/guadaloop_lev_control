@@ -5,11 +5,11 @@
 
 // Inductive Sensor Mapping Struct
 typedef struct IndSensorMap {
-  double A;
-  double K;
-  double B;
-  double C;
-  double v;
+  float A;
+  float K;
+  float B;
+  float C;
+  float v;
 } IndSensorMap;
 
 class IndSensor {
