@@ -16,6 +16,7 @@ class IndSensor {
   public:
     bool oor;
     float mmVal;
+    uint16_t analog;
 
     // Constructor
     IndSensor(IndSensorMap calibration, uint8_t analogPin);
@@ -27,7 +28,7 @@ class IndSensor {
     uint8_t pin;
 
     // helper function to convert analog reading to millimeters
-    float toMM(unsigned int raw);
+    float toMM(uint16_t raw);
 };
 
 // sensor instances
