@@ -4,8 +4,8 @@
 
 float refs[4] = {10.83,10.83,10.83,10.83};
 
-Constants repelling = {40, 0.01, 7};
-Constants attracting = {20, 0.01, 20};
+Constants repelling = {10000, 0, 50000};
+Constants attracting = {10000, 0, 50000};
 
 K_MAP consts = {repelling, attracting};
 

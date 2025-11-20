@@ -39,10 +39,10 @@ void PseudoSensorController::sendOutputs() {
 
 void PseudoSensorController::control() {
   float avg = (Left.mmVal + Right.mmVal + Front.mmVal + Back.mmVal) * 0.25f;
-  float pseudos[4] = {Front.mmVal + Left.mmVal - avg,
-                      Front.mmVal + Right.mmVal - avg,
-                      Back.mmVal + Left.mmVal - avg,
-                      Back.mmVal + Right.mmVal - avg};
+  float pseudos[4] = {Front.mmVal + Left.mmVal - avg, // FL
+                      Front.mmVal + Right.mmVal - avg, // FR
+                      Back.mmVal + Left.mmVal - avg, // BL
+                      Back.mmVal + Right.mmVal - avg}; // BR
 
   for (uint8_t i = 0; i < 4; i++) {
     float eCurr = Refs[i] - pseudos[i]; // Above reference is positive error.
