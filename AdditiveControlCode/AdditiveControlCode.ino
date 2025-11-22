@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "IndSensorMap.hpp"
 #include "Controller.hpp"
+#include "ADC.hpp"
 
 // K, Ki, Kd Constants
 Constants repelling = {1000, 0, 10000};
@@ -24,6 +25,9 @@ float slewRateLimit = 10000.0; // max PWM change per control cycle (determined b
 // Might be useful for things like jitter or lag.
 #define sampling_rate 1000 // Hz
 
+// EMA filter alpha value (all sensors use same alpha)
+#define alphaVal 0.3f
+
 // ABOVE THIS LINE IS TUNING VALUES ONLY, BELOW IS ACTUAL CODE.
 
 unsigned long tprior;
@@ -45,6 +49,12 @@ int ON = 0;
 
 void setup() {
   Serial.begin(115200);
+  setupADC();
+
+  indL.alpha = alphaVal;
+  indR.alpha = alphaVal;
+  indF.alpha = alphaVal;
+  indB.alpha = alphaVal;
 
   tprior = micros();
 

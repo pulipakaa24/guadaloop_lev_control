@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "IndSensorMap.hpp"
 #include "PseudoSensorControl.hpp"
+#include "ADC.hpp"
 
 float refs[4] = {12.9,12.3,12.6,12};
 
@@ -35,6 +36,8 @@ int ON = 0;
 
 void setup() {
   Serial.begin(115200);
+
+  setupADC();
 
   indL.alpha = alphaVal;
   indR.alpha = alphaVal;

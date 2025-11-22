@@ -1,6 +1,7 @@
 #include "IndSensorMap.hpp"
 #include <Arduino.h>
 #include <math.h>
+#include "ADC.hpp"
 
 // Sensor calibration data
 IndSensorMap ind0Map = {-8.976076325826309, 913.5463710698101, 0.29767471011439534, 5.6686184386250025, 0.3627635461289861};
@@ -22,13 +23,19 @@ float IndSensor::toMM(uint16_t raw) {
 
 // Read sensor directly from pin and convert to millimeters
 float IndSensor::readMM() {
-  uint16_t raw = constrain(analogRead(pin), 0, 900);
+  uint8_t index = pin - A0;
+  index = (index > 3) ? index - 2 : index;
+  uint16_t raw;
+
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    raw = constrain(adc_results[index], 0, 900);
+  }
   
   // Exponential moving average filter
   filteredRaw = alpha * raw + (1.0f - alpha) * filteredRaw;
   
   analog = (uint16_t)filteredRaw;
-  oor = (analog == 0 || analog > 870);
+  oor = (analog < 10 || analog > 870);
   mmVal = toMM(analog);
   return mmVal;
 }
