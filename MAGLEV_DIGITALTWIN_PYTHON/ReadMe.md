@@ -1,6 +1,7 @@
 # How To Use
 ## Running the Simulation
 Run ```pip install -r requirements.txt``` followed by ```python topSimulate.py```. Or, if your environment is already set up, just run the python file.
+Generated files will be saved to ```sim_results/``` in the directory where the python script is run from (likely the root directory of your repository clone).
 ## Modifying the PID control algorithm
 Modify ```controller.py```. You will see constants related to heave, pitch, and roll controllers. Will update to include current control and will make simulation much more accurate soon.
 ## Modifying pod parameters
