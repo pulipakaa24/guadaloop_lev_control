@@ -10,9 +10,13 @@ from utils import euler2dcm, fmag2, initialize_magnetic_characteristics, reset_m
 from simulate import simulate_maglev_control
 from visualize import visualize_quad
 import os
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
 
 # ===== SIMULATION CONFIGURATION =====
 NUM_TRIALS = 5  # Number of trials to run
+NUM_CORES_LIMIT = 8 # Max number of CPU cores to use for simulations 
+# (min of this and num of cores on ur computer will be chosen.)
 NOISE_LEVEL = 0.1  # Standard deviation of noise (5%)
 # =====================================
 
@@ -86,7 +90,7 @@ def generate_parameter_report(trial_num, quad_params, output_dir):
 
 
 def run_single_trial(trial_num, Tsim, delt, ref_gap, z0, output_dir):
-    """Run a single simulation trial with randomized parameters"""
+    """Run a single simulation trial with randomized parameters, including all visualizations"""
     
     # Reset and reinitialize noise for this trial
     reset_parameter_variations()
@@ -113,7 +117,7 @@ def run_single_trial(trial_num, Tsim, delt, ref_gap, z0, output_dir):
     oversampFact = 10
     
     # Check nominal gap
-    print(f"Force check: {4*fmag2(0, 10.830e-3) - m*g}")
+    print(f"Trial {trial_num}: Force check: {4*fmag2(0, 10.830e-3) - m*g}")
     
     # SET REFERENCE HERE
     ref_gap = 10.830e-3  # from python code
@@ -166,9 +170,9 @@ def run_single_trial(trial_num, Tsim, delt, ref_gap, z0, output_dir):
     generate_parameter_report(trial_num, quad_params, output_dir)
     
     # Run simulation
-    print(f"  Running simulation for trial {trial_num}...")
+    print(f"Trial {trial_num}: Running simulation...")
     P0 = simulate_maglev_control(R, S, P)
-    print(f"  Trial {trial_num} simulation complete!")
+    print(f"Trial {trial_num}: Simulation complete!")
     
     # Extract results
     tVec_out = P0['tVec']
@@ -179,7 +183,7 @@ def run_single_trial(trial_num, Tsim, delt, ref_gap, z0, output_dir):
     currents = state['currents']
     
     # Generate 3D visualization (GIF) without displaying
-    print(f"  Generating 3D visualization for trial {trial_num}...")
+    print(f"Trial {trial_num}: Generating 3D visualization...")
     S2 = {
         'tVec': tVec_out,
         'rMat': rMat,
@@ -194,6 +198,65 @@ def run_single_trial(trial_num, Tsim, delt, ref_gap, z0, output_dir):
     
     # Calculate forces
     Fm = fmag2(currents[:, 0], gaps[:, 0])
+    
+    # Generate plots immediately after simulation
+    print(f"Trial {trial_num}: Generating plots...")
+    
+    # Create plots for this trial
+    fig = plt.figure(figsize=(12, 8))
+    fig.suptitle(f'Trial {trial_num} - Noise Level {NOISE_LEVEL*100:.1f}%', fontsize=14, fontweight='bold')
+    
+    # Plot 1: Gaps
+    ax1 = plt.subplot(3, 1, 1)
+    plt.plot(tVec_out, gaps * 1e3)
+    plt.axhline(y=ref_gap * 1e3, color='k', linestyle='--', linewidth=1, label='Reference')
+    plt.ylabel('Gap (mm)')
+    plt.title('Sensor Gaps')
+    plt.legend(['Sensor 1', 'Sensor 2', 'Sensor 3', 'Sensor 4', 'Reference'], 
+              loc='upper right', fontsize=8)
+    plt.grid(True)
+    plt.xticks([])
+    
+    # Plot 2: Currents
+    ax2 = plt.subplot(3, 1, 2)
+    plt.plot(tVec_out, currents)
+    plt.ylabel('Current (A)')
+    plt.title('Yoke Currents')
+    plt.legend(['Yoke 1', 'Yoke 2', 'Yoke 3', 'Yoke 4'], 
+              loc='upper right', fontsize=8)
+    plt.grid(True)
+    plt.xticks([])
+    
+    # Plot 3: Forces
+    ax3 = plt.subplot(3, 1, 3)
+    plt.plot(tVec_out, Fm)
+    plt.xlabel('Time (sec)')
+    plt.ylabel('Force (N)')
+    plt.title('Magnetic Force (Yoke 1)')
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig(f'{output_dir}/trial_{trial_num:02d}_results.png', dpi=150)
+    plt.close()
+    
+    # FFT for this trial
+    Fs = 1/delt * oversampFact
+    L = len(tVec_out)
+    
+    Y = np.fft.fft(Fm)
+    frequencies = Fs / L * np.arange(L)
+    
+    fig2 = plt.figure(figsize=(10, 6))
+    plt.semilogx(frequencies, np.abs(Y), linewidth=2)
+    plt.title(f"FFT Spectrum - Trial {trial_num}")
+    plt.xlabel("Frequency (Hz)")
+    plt.ylabel("Magnitude")
+    plt.ylim([0, np.max(np.abs(Y[1:])) * 1.05])
+    plt.grid(True)
+    plt.savefig(f'{output_dir}/trial_{trial_num:02d}_fft.png', dpi=150)
+    plt.close()
+    
+    print(f"Trial {trial_num}: COMPLETE (all outputs generated)")
     
     return {
         'tVec': tVec_out,
@@ -223,80 +286,23 @@ def main():
     
     print(f"\n{'='*60}")
     print(f"Running {NUM_TRIALS} trials with noise level {NOISE_LEVEL*100:.1f}%")
+    num_cores = min(multiprocessing.cpu_count(), NUM_CORES_LIMIT)
+    print(f"Using {num_cores} CPU cores for parallel processing")
     print(f"{'='*60}\n")
     
-    # Run all trials
+    # Run all trials in parallel (each trial does simulation + visualization + plots)
     trial_results = []
-    for trial in range(1, NUM_TRIALS + 1):
-        print(f"Trial {trial}/{NUM_TRIALS}")
-        result = run_single_trial(trial, Tsim, delt, ref_gap, z0, output_dir)
-        trial_results.append(result)
-        print()
-    
-    # Create individual plots for each trial
-    print("Generating plots...")
-    for i, result in enumerate(trial_results, 1):
-        tVec_out = result['tVec']
-        gaps = result['gaps']
-        currents = result['currents']
-        Fm = result['Fm']
+    with ProcessPoolExecutor(max_workers=num_cores) as executor:
+        # Submit all trials
+        futures = [
+            executor.submit(run_single_trial, trial, Tsim, delt, ref_gap, z0, output_dir)
+            for trial in range(1, NUM_TRIALS + 1)
+        ]
         
-        # Create plots for this trial
-        fig = plt.figure(figsize=(12, 8))
-        fig.suptitle(f'Trial {i} - Noise Level {NOISE_LEVEL*100:.1f}%', fontsize=14, fontweight='bold')
-        
-        # Plot 1: Gaps
-        ax1 = plt.subplot(3, 1, 1)
-        plt.plot(tVec_out, gaps * 1e3)
-        plt.axhline(y=ref_gap * 1e3, color='k', linestyle='--', linewidth=1, label='Reference')
-        plt.ylabel('Gap (mm)')
-        plt.title('Sensor Gaps')
-        plt.legend(['Sensor 1', 'Sensor 2', 'Sensor 3', 'Sensor 4', 'Reference'], 
-                  loc='upper right', fontsize=8)
-        plt.grid(True)
-        plt.xticks([])
-        
-        # Plot 2: Currents
-        ax2 = plt.subplot(3, 1, 2)
-        plt.plot(tVec_out, currents)
-        plt.ylabel('Current (A)')
-        plt.title('Yoke Currents')
-        plt.legend(['Yoke 1', 'Yoke 2', 'Yoke 3', 'Yoke 4'], 
-                  loc='upper right', fontsize=8)
-        plt.grid(True)
-        plt.xticks([])
-        
-        # Plot 3: Forces
-        ax3 = plt.subplot(3, 1, 3)
-        plt.plot(tVec_out, Fm)
-        plt.xlabel('Time (sec)')
-        plt.ylabel('Force (N)')
-        plt.title('Magnetic Force (Yoke 1)')
-        plt.grid(True)
-        
-        plt.tight_layout()
-        plt.savefig(f'{output_dir}/trial_{i:02d}_results.png', dpi=150)
-        print(f"  Saved trial {i} plot")
-        plt.close()
-        
-        # FFT for this trial
-        oversampFact = 10
-        Fs = 1/delt * oversampFact
-        L = len(tVec_out)
-        
-        Y = np.fft.fft(Fm)
-        frequencies = Fs / L * np.arange(L)
-        
-        fig2 = plt.figure(figsize=(10, 6))
-        plt.semilogx(frequencies, np.abs(Y), linewidth=2)
-        plt.title(f"FFT Spectrum - Trial {i}")
-        plt.xlabel("Frequency (Hz)")
-        plt.ylabel("Magnitude")
-        plt.ylim([0, np.max(np.abs(Y[1:])) * 1.05])
-        plt.grid(True)
-        plt.savefig(f'{output_dir}/trial_{i:02d}_fft.png', dpi=150)
-        print(f"  Saved trial {i} FFT")
-        plt.close()
+        # Collect results as they complete
+        for future in futures:
+            result = future.result()
+            trial_results.append(result)
     
     # Create overlay comparison plots
     print("\nGenerating comparison plots...")
