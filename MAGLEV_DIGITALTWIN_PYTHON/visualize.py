@@ -101,6 +101,9 @@ def visualize_quad(S):
         # Plot body axes
         plot_axes(ax, r, RIB)
         
+        # Add steel plate
+        plot_steel_plate(ax, S['bounds'])
+        
         ax.set_xlim([S['bounds'][0], S['bounds'][1]])
         ax.set_ylim([S['bounds'][2], S['bounds'][3]])
         ax.set_zlim([S['bounds'][4], S['bounds'][5]])
@@ -152,6 +155,10 @@ def visualize_quad(S):
             ax.set_zlabel('Z')
             ax.view_init(elev=0, azim=0)
             ax.grid(True)
+            
+            # Add steel plate
+            plot_steel_plate(ax, S['bounds'])
+            
             return []
         
         def update(frame):
@@ -217,6 +224,68 @@ def plot_body(ax, r, RIB, body_faces):
                            edgecolor='black', linewidths=1)
     ax.add_collection3d(poly)
     return poly
+
+
+def plot_steel_plate(ax, bounds):
+    """
+    Plot a steel plate at z=0 with 0.25 inch thickness
+    
+    Parameters
+    ----------
+    ax : Axes3D
+        The 3D axis to plot on
+    bounds : list
+        6-element list [xmin, xmax, ymin, ymax, zmin, zmax]
+    
+    Returns
+    -------
+    plate : Poly3DCollection
+        The plate collection object
+    """
+    plate_thickness = 0.25 * 0.0254  # 0.25 inches to meters
+    x_bounds = [bounds[0], bounds[1]]
+    y_bounds = [bounds[2], bounds[3]]
+    
+    # Create plate vertices (top at z=0, bottom at z=-thickness)
+    plate_vertices = [
+        # Top surface
+        [[x_bounds[0], y_bounds[0], plate_thickness],
+         [x_bounds[1], y_bounds[0], plate_thickness],
+         [x_bounds[1], y_bounds[1], plate_thickness],
+         [x_bounds[0], y_bounds[1], plate_thickness]],
+        # Bottom surface
+        [[x_bounds[0], y_bounds[0], 0],
+         [x_bounds[1], y_bounds[0], 0],
+         [x_bounds[1], y_bounds[1], 0],
+         [x_bounds[0], y_bounds[1], 0]],
+        # Side 1
+        [[x_bounds[0], y_bounds[0], plate_thickness],
+         [x_bounds[1], y_bounds[0], plate_thickness],
+         [x_bounds[1], y_bounds[0], 0],
+         [x_bounds[0], y_bounds[0], 0]],
+        # Side 2
+        [[x_bounds[1], y_bounds[0], plate_thickness],
+         [x_bounds[1], y_bounds[1], plate_thickness],
+         [x_bounds[1], y_bounds[1], 0],
+         [x_bounds[1], y_bounds[0], 0]],
+        # Side 3
+        [[x_bounds[1], y_bounds[1], plate_thickness],
+         [x_bounds[0], y_bounds[1], plate_thickness],
+         [x_bounds[0], y_bounds[1], 0],
+         [x_bounds[1], y_bounds[1], 0]],
+        # Side 4
+        [[x_bounds[0], y_bounds[1], plate_thickness],
+         [x_bounds[0], y_bounds[0], plate_thickness],
+         [x_bounds[0], y_bounds[0], 0],
+         [x_bounds[0], y_bounds[1], 0]]
+    ]
+    
+    # Steel gray color
+    steel_color = [0.7, 0.7, 0.75]
+    plate = Poly3DCollection(plate_vertices, alpha=0.3, facecolor=steel_color, 
+                            edgecolor='darkgray', linewidths=0.5)
+    ax.add_collection3d(plate)
+    return plate
 
 
 def plot_axes(ax, r, RIB):

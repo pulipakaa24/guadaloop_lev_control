@@ -10,10 +10,15 @@ from parameters import QuadParams, Constants
 from utils import euler2dcm, fmag2
 from simulate import simulate_maglev_control
 from visualize import visualize_quad
+import os
 
 
 def main():
     """Main simulation script"""
+    
+    # Create output directory if it doesn't exist
+    output_dir = 'sim_results'
+    os.makedirs(output_dir, exist_ok=True)
     
     # SET REFERENCE HERE
     # Total simulation time, in seconds
@@ -127,7 +132,7 @@ def main():
         'eMat': eMat,
         'plotFrequency': 20,
         'makeGifFlag': True,
-        'gifFileName': 'testGif.gif',
+        'gifFileName': 'sim_results/testGif.gif',
         'bounds': [-1, 1, -1, 1, -300e-3, 0.000]
     }
     visualize_quad(S2)
@@ -161,7 +166,7 @@ def main():
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig('simulation_results.png', dpi=150)
+    plt.savefig('sim_results/simulation_results.png', dpi=150)
     print("Saved plot to simulation_results.png")
     
     # Commented out horizontal position plot (as in MATLAB)
@@ -189,8 +194,10 @@ def main():
     plt.title("Complex Magnitude of fft Spectrum")
     plt.xlabel("f (Hz)")
     plt.ylabel("|fft(X)|")
+    # Exclude DC component (first element) from scaling to see AC components better
+    plt.ylim([0, np.max(np.abs(Y[1:])) * 1.05])  # Dynamic y-axis excluding DC
     plt.grid(True)
-    plt.savefig('fft_spectrum.png', dpi=150)
+    plt.savefig('sim_results/fft_spectrum.png', dpi=150)
     print("Saved FFT plot to fft_spectrum.png")
     
     # Show all plots
