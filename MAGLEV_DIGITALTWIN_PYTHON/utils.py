@@ -6,6 +6,83 @@ Ported from MATLAB to Python
 import numpy as np
 
 
+# Global magnetic characteristics with random variation
+# These are initialized once and persist across function calls
+_mag_characteristics = None
+
+
+def initialize_magnetic_characteristics(noise_level=0.05, seed=None):
+    """
+    Initialize magnetic force characteristics with random variation.
+    Call this once at the start of a simulation to set random parameters.
+    
+    Parameters
+    ----------
+    noise_level : float, optional
+        Standard deviation of multiplicative noise (default: 0.05 = 5%)
+    seed : int, optional
+        Random seed for reproducibility
+    
+    Returns
+    -------
+    dict
+        Dictionary with perturbed magnetic coefficients
+    """
+    global _mag_characteristics
+    
+    if seed is not None:
+        np.random.seed(seed)
+    
+    # Nominal coefficients from fmag2
+    nominal = {
+        'N': 250,
+        'const1': 0.2223394555e5,
+        'const2': 0.2466906550e10,
+        'const3': 0.6886569338e8,
+        'const4': 0.6167266375e9,
+        'const5': 0.3042813963e19
+    }
+    
+    # Add multiplicative noise to each coefficient
+    _mag_characteristics = {
+        key: value * (1 + np.random.normal(0, noise_level))
+        for key, value in nominal.items()
+    }
+    
+    return _mag_characteristics.copy()
+
+
+def get_magnetic_characteristics():
+    """
+    Get current magnetic characteristics. If not initialized, use nominal values.
+    
+    Returns
+    -------
+    dict
+        Dictionary with magnetic coefficients
+    """
+    global _mag_characteristics
+    
+    if _mag_characteristics is None:
+        # Use nominal values if not initialized
+        _mag_characteristics = {
+            'N': 250,
+            'const1': 0.2223394555e5,
+            'const2': 0.2466906550e10,
+            'const3': 0.6886569338e8,
+            'const4': 0.6167266375e9,
+            'const5': 0.3042813963e19
+        }
+    
+    return _mag_characteristics
+
+
+def reset_magnetic_characteristics():
+    """Reset magnetic characteristics to force reinitialization"""
+    global _mag_characteristics
+    _mag_characteristics = None
+
+
 def cross_product_equivalent(u):
     """
     Outputs the cross-product-equivalent matrix uCross such that for arbitrary 
@@ -152,6 +229,9 @@ def fmag2(i, z):
     Fm : float or ndarray
         Magnetic force in Newtons (-1 if z < 0, indicating error)
     """
+    # Get current magnetic characteristics (nominal or perturbed)
+    mc = get_magnetic_characteristics()
+    
     # Handle scalar and array inputs
     z_scalar = np.isscalar(z)
     i_scalar = np.isscalar(i)
@@ -160,12 +240,11 @@ def fmag2(i, z):
         if z < 0:
             return -1
         
-        N = 250
-        term1 = (-2 * i * N + 0.2223394555e5)
-        denominator = (0.2466906550e10 * z + 0.6886569338e8)
+        term1 = (-2 * i * mc['N'] + mc['const1'])
+        denominator = (mc['const2'] * z + mc['const3'])
         
-        Fm = (0.6167266375e9 * term1**2 / denominator**2 - 
-              0.3042813963e19 * z * term1**2 / denominator**3)
+        Fm = (mc['const4'] * term1**2 / denominator**2 - 
+              mc['const5'] * z * term1**2 / denominator**3)
         
         return Fm
     else:
@@ -180,24 +259,22 @@ def fmag2(i, z):
             valid_mask = z >= 0
             
             if np.any(valid_mask):
-                N = 250
                 z_valid = z[valid_mask]
                 i_valid = i if i_scalar else i[valid_mask]
                 
-                term1 = (-2 * i_valid * N + 0.2223394555e5)
-                denominator = (0.2466906550e10 * z_valid + 0.6886569338e8)
+                term1 = (-2 * i_valid * mc['N'] + mc['const1'])
+                denominator = (mc['const2'] * z_valid + mc['const3'])
                 
-                Fm[valid_mask] = (0.6167266375e9 * term1**2 / denominator**2 - 
-                                   0.3042813963e19 * z_valid * term1**2 / denominator**3)
+                Fm[valid_mask] = (mc['const4'] * term1**2 / denominator**2 - 
+                                   mc['const5'] * z_valid * term1**2 / denominator**3)
             
             Fm[~valid_mask] = -1
             return Fm
         else:
-            N = 250
-            term1 = (-2 * i * N + 0.2223394555e5)
-            denominator = (0.2466906550e10 * z + 0.6886569338e8)
+            term1 = (-2 * i * mc['N'] + mc['const1'])
+            denominator = (mc['const2'] * z + mc['const3'])
             
-            Fm = (0.6167266375e9 * term1**2 / denominator**2 - 
-                  0.3042813963e19 * z * term1**2 / denominator**3)
+            Fm = (mc['const4'] * term1**2 / denominator**2 - 
+                  mc['const5'] * z * term1**2 / denominator**3)
             
             return Fm

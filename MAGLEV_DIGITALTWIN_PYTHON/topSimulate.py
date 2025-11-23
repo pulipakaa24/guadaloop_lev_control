@@ -19,7 +19,6 @@ def main():
     output_dir = 'sim_results'
     os.makedirs(output_dir, exist_ok=True)
     
-    # SET REFERENCE HERE
     # Total simulation time, in seconds
     Tsim = 2
     
@@ -40,16 +39,17 @@ def main():
     tVec = np.arange(N) * delt
     
     # Matrix of disturbance forces acting on the body, in Newtons, expressed in I
-    distMat = np.random.normal(0, 10, (N-1, 3))
+    distMat = np.random.normal(0, 0, (N-1, 3))
     
     # Oversampling factor
     oversampFact = 10
     
     # Check nominal gap
-    print(f"Force check: {4*fmag2(0, 11.239e-3) - m*g}")
+    print(f"Force check: {4*fmag2(0, 10.830e-3) - m*g}")
     
+    # SET REFERENCE HERE
     ref_gap = 10.830e-3  # from python code
-    z0 = ref_gap + 2e-3
+    z0 = ref_gap - 2e-3
     
     # Create reference trajectories
     rIstar = np.zeros((N, 3))

@@ -199,8 +199,9 @@ def visualize_quad(S):
             writer = PillowWriter(fps=S['plotFrequency'])
             anim.save(S['gifFileName'], writer=writer)
             print(f"Animation saved to {S['gifFileName']}")
-        
-        plt.show()
+            plt.close(fig)  # Close without displaying
+        else:
+            plt.show()
         
         P = {
             'tPlot': tPlot,

@@ -1,7 +1,10 @@
 # How To Use
 ## Running the Simulation
-Run ```pip install -r requirements.txt``` followed by ```python topSimulate.py```. Or, if your environment is already set up, just run the python file.
-Generated files will be saved to ```sim_results/``` in the directory where the python script is run from (likely the root directory of your repository clone).
+Run ```pip install -r requirements.txt``` followed by the desired simulation file. Or, if your environment is already set up, just run the python file.
+### Single Simulation
+Run ```topSimulate.py```. You must exit the visualization window in order to see the data plots. <br> Generated files will be saved to ```sim_results/``` in the directory where the python script is run from (likely the root directory of your repository clone).
+### Multiple Simulations with parameter noise
+Set desired parameter noise level in ```simulateMultipleWithNoise.py```, then run. Noise is applied to electromagnetic characteristics, length, width, sensor position, yoke position, moment of inertia, and mass. <br> Generated files will be saved to ```sim_results_multi/```.
 ## Modifying the PID control algorithm
 Modify ```controller.py```. You will see constants related to heave, pitch, and roll controllers. Will update to include current control and will make simulation much more accurate soon.
 ## Modifying pod parameters

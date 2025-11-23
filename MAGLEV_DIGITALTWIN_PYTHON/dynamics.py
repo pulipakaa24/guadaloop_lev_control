@@ -44,8 +44,9 @@ def quad_ode_function_hf(t, X, eaVec, distVec, P):
     Xdot : ndarray, shape (22,)
         Time derivative of the input vector X
     """
-    yokeR = P['quadParams'].yokeR  # in ohms
-    yokeL = P['quadParams'].yokeL  # in henries
+    # Use individual yoke resistances and inductances
+    yokeR = P['quadParams'].yokeR_individual  # 4-element array in ohms
+    yokeL = P['quadParams'].yokeL_individual  # 4-element array in henries
     
     # Extract state variables
     currents = X[18:22]  # indices 19:22 in MATLAB (1-indexed) = 18:22 in Python
@@ -85,8 +86,8 @@ def quad_ode_function_hf(t, X, eaVec, distVec, P):
     # Calculate torques on body
     Nb = np.zeros(3)
     for i in range(4):  # loop through each yoke
-        # Voltage-motor modeling
-        currentsdot[i] = (eaVec[i] - currents[i] * yokeR) / yokeL
+        # Voltage-motor modeling using individual R and L for each yoke
+        currentsdot[i] = (eaVec[i] - currents[i] * yokeR[i]) / yokeL[i]
         
         NiB = np.zeros(3)  # since yokes can't cause moment by themselves
         FiB = np.array([0, 0, Fm[i]])

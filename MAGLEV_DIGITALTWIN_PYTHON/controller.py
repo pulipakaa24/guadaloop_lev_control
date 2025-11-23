@@ -127,7 +127,7 @@ class DecentralizedPIDController:
         
         # Apply saturation
         s = np.sign(eadesired)
-        maxea = P['quadParams'].maxVoltage * np.ones(4)
+        maxea = P['quadParams'].maxVoltage
         
         ea = s * np.minimum(np.abs(eadesired), maxea)
         
