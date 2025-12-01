@@ -39,16 +39,17 @@ void FullController::sendOutputs() {
     zeroPWMs();
   }
 
-  // The following assumes 0 direction drives repulsion and 1 direction drives attraction.
-  // Using direct register writes to maintain fast PWM mode set by setupFastPWM()
+  // The following assumes 0 direction drives repulsion and 1 direction drives
+  // attraction. Using direct register writes to maintain fast PWM mode set by
+  // setupFastPWM()
   digitalWrite(dirFL, FLPWM < 0);
-  OCR2A = abs(FLPWM);  // Pin 11 -> Timer 2A
+  OCR2A = abs(FLPWM); // Pin 11 -> Timer 2A
   digitalWrite(dirBL, BLPWM < 0);
-  OCR1A = abs(BLPWM);  // Pin 9 -> Timer 1A
+  OCR1A = abs(BLPWM); // Pin 9 -> Timer 1A
   digitalWrite(dirFR, FRPWM < 0);
-  OCR2B = abs(FRPWM);  // Pin 3 -> Timer 2B
+  OCR2B = abs(FRPWM); // Pin 3 -> Timer 2B
   digitalWrite(dirBR, BRPWM < 0);
-  OCR1B = abs(BRPWM);  // Pin 10 -> Timer 1B
+  OCR1B = abs(BRPWM); // Pin 10 -> Timer 1B
 }
 
 void FullController::avgControl() {
@@ -58,7 +59,8 @@ void FullController::avgControl() {
   avgError.eDiff = eCurr - avgError.e;
   if (!oor) {
     avgError.eInt += eCurr;
-    avgError.eInt = constrain(avgError.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
+    avgError.eInt =
+        constrain(avgError.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
   }
   avgError.e = eCurr;
 
@@ -67,14 +69,18 @@ void FullController::avgControl() {
 
 void FullController::LRControl() {
   float diff = Right.mmVal - Left.mmVal; // how far above the right is the left?
-  float eCurr = diff - LRDiffRef; // how different is that from the reference? positive -> Left repels, Right attracts.
-  K_MAP rConsts = {LConsts.attracting, LConsts.repelling}; // apply attracting to repelling and vice versa.
+  float eCurr = diff - LRDiffRef; // how different is that from the reference?
+                                  // positive -> Left repels, Right attracts.
+  K_MAP rConsts = {
+      LConsts.attracting,
+      LConsts.repelling}; // apply attracting to repelling and vice versa.
 
   LRDiffErr.eDiff = eCurr - LRDiffErr.e;
 
   if (!oor) {
     LRDiffErr.eInt += eCurr;
-    LRDiffErr.eInt = constrain(LRDiffErr.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
+    LRDiffErr.eInt =
+        constrain(LRDiffErr.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
   }
 
   LRDiffErr.e = eCurr;
@@ -85,16 +91,18 @@ void FullController::LRControl() {
 
 void FullController::FBControl() {
   float diff = Back.mmVal - Front.mmVal; // how far above the back is the front?
-  float eCurr = diff - FBDiffRef; // how different is that from ref? pos.->Front must repel, Back must attract
+  float eCurr = diff - FBDiffRef; // how different is that from ref? pos.->Front
+                                  // must repel, Back must attract
   K_MAP bConsts = {FConsts.attracting, FConsts.repelling};
 
   FBDiffErr.eDiff = eCurr - FBDiffErr.e;
 
   if (!oor) {
     FBDiffErr.eInt += eCurr;
-    FBDiffErr.eInt = constrain(FBDiffErr.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
+    FBDiffErr.eInt =
+        constrain(FBDiffErr.eInt, -MAX_INTEGRAL_TERM, MAX_INTEGRAL_TERM);
   }
-  
+
   FBDiffErr.e = eCurr;
 
   FDiffPWM = pwmFunc(FConsts, FBDiffErr);
@@ -102,35 +110,55 @@ void FullController::FBControl() {
 }
 
 int16_t FullController::pwmFunc(K_MAP consts, Errors errs) {
-  if (oor) return 0;
+  if (oor)
+    return 0;
   Constants constants = (errs.e < 0) ? consts.attracting : consts.repelling;
-  return (int)constrain(constants.kp*errs.e + constants.ki*errs.eInt + constants.kd*errs.eDiff, -(float)CAP,(float)CAP);
+  return (int)(constants.kp * errs.e + constants.ki * errs.eInt +
+                            constants.kd * errs.eDiff);
 }
 
 void FullController::report() {
-  Serial.print("SENSORS - Left: ");
+  // CSV Format: Left,Right,Front,Back,Avg,FLPWM,BLPWM,FRPWM,BRPWM,ControlOn
   Serial.print(Left.mmVal);
-  Serial.print("mm, Right: ");
+  Serial.print(",");
   Serial.print(Right.mmVal);
-  Serial.print("mm, Front: ");
+  Serial.print(",");
   Serial.print(Front.mmVal);
-  Serial.print("mm, Back: ");
+  Serial.print(",");
   Serial.print(Back.mmVal);
-  Serial.print("mm,\n");
-  Serial.print("AVG - ");
-  Serial.println(avg);
+  Serial.print(",");
+  Serial.print(avg);
+  Serial.print(",");
 
-  Serial.print("PWMS - FL_PWM: ");
   Serial.print(FLPWM);
-  Serial.print(", BL_PWM: ");
+  Serial.print(",");
   Serial.print(BLPWM);
-  Serial.print("FR_PWM: ");
+  Serial.print(",");
   Serial.print(FRPWM);
-  Serial.print("BR_PWM: ");
+  Serial.print(",");
   Serial.print(BRPWM);
-  Serial.print("\n");
+  Serial.print(",");
 
-  Serial.print("CONTROL ON - ");
-  Serial.print(outputOn);
-  Serial.print("\n");
+  Serial.println(outputOn);
+}
+
+void FullController::updateAvgPID(Constants repel, Constants attract) {
+  avgConsts.repelling = repel;
+  avgConsts.attracting = attract;
+}
+
+void FullController::updateLRPID(Constants down, Constants up) {
+  LConsts.repelling = down;
+  LConsts.attracting = up;
+}
+
+void FullController::updateFBPID(Constants down, Constants up) {
+  FConsts.repelling = down;
+  FConsts.attracting = up;
+}
+
+void FullController::updateReferences(float avgReference, float lrDiffReference, float fbDiffReference) {
+  AvgRef = avgReference;
+  LRDiffRef = lrDiffReference;
+  FBDiffRef = fbDiffReference;
 }

@@ -7,7 +7,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from utils import euler2dcm, dcm2euler
 from dynamics import quad_ode_function_hf
-from controller import DecentralizedPIDController
+from MAGLEV_DIGITALTWIN_PYTHON.additiveController import AdditivePIDController
 
 
 def simulate_maglev_control(R, S, P):
@@ -84,7 +84,7 @@ def simulate_maglev_control(R, S, P):
     xk = x0
     
     # Create controller instance to maintain state
-    controller = DecentralizedPIDController()
+    controller = AdditivePIDController()
     
     for k in range(N - 1):  # loop through each time step
         tspan = np.arange(S['tVec'][k], S['tVec'][k+1] + dt/2, dt)

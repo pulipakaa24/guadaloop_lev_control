@@ -45,7 +45,7 @@ class FullController {
     bool outputOn;
 
     FullController(IndSensor& l, IndSensor& r, IndSensor& f, IndSensor& b,
-      FullConsts fullConsts, float avgRef, float lrDiffRef, float fbDiffRef, float slewRate)
+      FullConsts fullConsts, float avgRef, float lrDiffRef, float fbDiffRef)
       : Left(l), Right(r), Front(f), Back(b), AvgRef(avgRef), LRDiffRef(lrDiffRef),
       FBDiffRef(fbDiffRef), avgConsts(fullConsts.avg), LConsts(fullConsts.lColl),
       FConsts(fullConsts.fColl), avgError({0,0,0}), LRDiffErr({0,0,0}), 
@@ -55,13 +55,20 @@ class FullController {
     void zeroPWMs();
     void sendOutputs();
     void report();
+    
+    // PID tuning methods
+    void updateAvgPID(Constants repel, Constants attract);
+    void updateLRPID(Constants down, Constants up);
+    void updateFBPID(Constants down, Constants up);
+    
+    // Reference update methods
+    void updateReferences(float avgReference, float lrDiffReference, float fbDiffReference);
 
   private:
     void avgControl();
     void LRControl();
     void FBControl();
     int16_t pwmFunc(K_MAP consts, Errors errs);
-    int16_t slewLimit(int16_t target, int16_t prev);
 
     IndSensor& Front;
     IndSensor& Back;

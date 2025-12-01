@@ -6,7 +6,7 @@ Ported from decentralizedPIDcontroller.m
 import numpy as np
 
 
-class DecentralizedPIDController:
+class AdditivePIDController:
     """
     Decentralized PID controller for quadrotor/maglev control.
     Controls altitude, roll, and pitch using gap sensor feedback.
@@ -151,6 +151,6 @@ def decentralized_pid_controller(R, S, P, controller=None):
         4-element vector with voltages applied to each yoke
     """
     if controller is None:
-        controller = DecentralizedPIDController()
+        controller = AdditivePIDController()
     
     return controller.control(R, S, P)

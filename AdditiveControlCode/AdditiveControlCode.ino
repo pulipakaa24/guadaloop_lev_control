@@ -5,23 +5,19 @@
 #include "FastPWM.hpp"
 
 // K, Ki, Kd Constants
-Constants repelling = {1000, 0, 10000};
-Constants attracting = {1000, 0, 10000};
+Constants repelling = {250, 0, 1000};
+Constants attracting = {250, 0, 1000};
 
-Constants RollLeftUp = {500, 0, 10000};
-Constants RollLeftDown = {500, 0, 10000};
+Constants RollLeftUp = {0, 0, 100};
+Constants RollLeftDown = {0, 0, 100};
 
-Constants RollFrontUp = {500, 0, 10000};
-Constants RollFrontDown = {500, 0, 10000};
+Constants RollFrontUp = {0, 0, 500};
+Constants RollFrontDown = {0, 0, 500};
 
 // Reference values for average dist, 
-float avgRef = 12.0; // TBD: what is our equilibrium height with this testrig?
-float LRDiffRef = 0.0; // TBD: what is our left-right balance equilibrium? Positive -> left is above right
-float FBDiffRef = 2; // TBD: what is front-back balance equilibrium? Positive -> front above back.
-
-float slewRateLimit = 10000.0; // max PWM change per control cycle (determined by 1 second / sampling rate)
-// this was implemented by Claude and we can see if it helps.
-// Set it at or above 255 to make it have no effect.
+float avgRef = 11.0; // TBD: what is our equilibrium height with this testrig?
+float LRDiffRef = -2.0; // TBD: what is our left-right balance equilibrium? Positive -> left is above right
+float FBDiffRef = 0.0; // TBD: what is front-back balance equilibrium? Positive -> front above back.
 
 // Might be useful for things like jitter or lag.
 #define sampling_rate 1000 // Hz
@@ -40,7 +36,7 @@ FullConsts fullConsts = {
   {RollFrontDown, RollFrontUp}
 };
 
-FullController controller(indL, indR, indF, indB, fullConsts, avgRef, LRDiffRef, FBDiffRef, slewRateLimit);
+FullController controller(indL, indR, indF, indB, fullConsts, avgRef, LRDiffRef, FBDiffRef);
 
 const int dt_micros = 1e6/sampling_rate;
 
@@ -49,7 +45,7 @@ const int dt_micros = 1e6/sampling_rate;
 int ON = 0;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(2000000);
   setupADC();
   setupFastPWM();
 
@@ -72,11 +68,96 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {
-    // this might need to be changed if we have trouble getting serial to read. 
-    char c = Serial.read();
-    while(Serial.available()) Serial.read(); // flush remaining
-
-    controller.outputOn = (c != '0');
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    
+    // Check if it's a reference update command (format: REF,avgRef,lrDiffRef,fbDiffRef)
+    if (cmd.startsWith("REF,")) {
+      int firstComma = cmd.indexOf(',');
+      int secondComma = cmd.indexOf(',', firstComma + 1);
+      int thirdComma = cmd.indexOf(',', secondComma + 1);
+      
+      if (firstComma > 0 && secondComma > 0 && thirdComma > 0) {
+        float newAvgRef = cmd.substring(firstComma + 1, secondComma).toFloat();
+        float newLRDiffRef = cmd.substring(secondComma + 1, thirdComma).toFloat();
+        float newFBDiffRef = cmd.substring(thirdComma + 1).toFloat();
+        
+        avgRef = newAvgRef;
+        LRDiffRef = newLRDiffRef;
+        FBDiffRef = newFBDiffRef;
+        
+        controller.updateReferences(avgRef, LRDiffRef, FBDiffRef);
+        Serial.print("Updated References: Avg=");
+        Serial.print(avgRef);
+        Serial.print(", LR=");
+        Serial.print(LRDiffRef);
+        Serial.print(", FB=");
+        Serial.println(FBDiffRef);
+      }
+    }
+    // Check if it's a PID tuning command (format: PID,mode,kp,ki,kd)
+    else if (cmd.startsWith("PID,")) {
+      int firstComma = cmd.indexOf(',');
+      int secondComma = cmd.indexOf(',', firstComma + 1);
+      int thirdComma = cmd.indexOf(',', secondComma + 1);
+      int fourthComma = cmd.indexOf(',', thirdComma + 1);
+      
+      if (firstComma > 0 && secondComma > 0 && thirdComma > 0 && fourthComma > 0) {
+        int mode = cmd.substring(firstComma + 1, secondComma).toInt();
+        float kp = cmd.substring(secondComma + 1, thirdComma).toFloat();
+        float ki = cmd.substring(thirdComma + 1, fourthComma).toFloat();
+        float kd = cmd.substring(fourthComma + 1).toFloat();
+        
+        Constants newConst = {kp, ki, kd};
+        
+        // Mode mapping:
+        // 0: Repelling
+        // 1: Attracting
+        // 2: RollLeftDown
+        // 3: RollLeftUp
+        // 4: RollFrontDown
+        // 5: RollFrontUp
+        
+        switch(mode) {
+          case 0: // Repelling
+            repelling = newConst;
+            controller.updateAvgPID(repelling, attracting);
+            Serial.println("Updated Repelling PID");
+            break;
+          case 1: // Attracting
+            attracting = newConst;
+            controller.updateAvgPID(repelling, attracting);
+            Serial.println("Updated Attracting PID");
+            break;
+          case 2: // RollLeftDown
+            RollLeftDown = newConst;
+            controller.updateLRPID(RollLeftDown, RollLeftUp);
+            Serial.println("Updated RollLeftDown PID");
+            break;
+          case 3: // RollLeftUp
+            RollLeftUp = newConst;
+            controller.updateLRPID(RollLeftDown, RollLeftUp);
+            Serial.println("Updated RollLeftUp PID");
+            break;
+          case 4: // RollFrontDown
+            RollFrontDown = newConst;
+            controller.updateFBPID(RollFrontDown, RollFrontUp);
+            Serial.println("Updated RollFrontDown PID");
+            break;
+          case 5: // RollFrontUp
+            RollFrontUp = newConst;
+            controller.updateFBPID(RollFrontDown, RollFrontUp);
+            Serial.println("Updated RollFrontUp PID");
+            break;
+          default:
+            Serial.println("Invalid mode");
+            break;
+        }
+      }
+    } else {
+      // Original control on/off command
+      controller.outputOn = (cmd.charAt(0) != '0');
+    }
   }
   
   tDiffMicros = micros() - tprior;
