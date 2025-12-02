@@ -6,6 +6,7 @@
 
 
 #include "HX711.h"
+#include "CalibConsts.hpp"
 
 HX711 myScale;
 
@@ -24,14 +25,14 @@ void setup()
   Serial.println();
 
   myScale.begin(dataPin, clockPin);
-  myScale.set_offset(26784);
-  myScale.set_scale(106.557518);
+  myScale.set_offset(OFFSET);
+  myScale.set_scale(SCALE);
 }
 
 void loop()
 {
-  // Serial.println(myScale.get_units());
-  calibrate();
+  Serial.println(myScale.get_units());
+  // calibrate();
 }
 
 
