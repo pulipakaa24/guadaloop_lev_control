@@ -11,8 +11,8 @@
 HX711 myScale;
 
 //  adjust pins if needed.
-uint8_t dataPin = 2;
-uint8_t clockPin = 3;
+uint8_t dataPin = 4;
+uint8_t clockPin = 5;
 
 
 void setup()
@@ -25,8 +25,8 @@ void setup()
   Serial.println();
 
   myScale.begin(dataPin, clockPin);
-  myScale.set_offset(OFFSET);
-  myScale.set_scale(SCALE);
+  myScale.set_offset(OFFSET1);
+  myScale.set_scale(SCALE1);
 }
 
 void loop()

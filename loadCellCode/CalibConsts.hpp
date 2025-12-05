@@ -1,7 +1,10 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#define OFFSET 19532
-#define SCALE 108.633064
+#define OFFSET0 19532
+#define SCALE0  108.633064
+
+#define OFFSET1 164066
+#define SCALE1  102.531166
 
 #endif
