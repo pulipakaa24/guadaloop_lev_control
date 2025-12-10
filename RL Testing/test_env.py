@@ -1,0 +1,59 @@
+"""
+Test script for LevPodEnv
+Runs a simple episode with constant actions to verify the environment works
+"""
+
+from lev_pod_env import LevPodEnv
+import numpy as np
+
+# Create environment with GUI for visualization
+env = LevPodEnv(use_gui=True, initial_gap_mm=15)
+
+print("=" * 60)
+print("Testing LevPodEnv")
+print("=" * 60)
+print(f"Action space: {env.action_space}")
+print(f"  4 PWM duty cycles: [front_L, front_R, back_L, back_R]")
+print(f"Observation space: {env.observation_space}")
+print(f"  8 values: [gaps(4), velocities(4)]")
+print("=" * 60)
+
+# Reset environment
+obs, info = env.reset()
+print(f"\nInitial observation:")
+print(f"  Gaps: CR={obs[0]*1000:.2f}mm, CL={obs[1]*1000:.2f}mm, F={obs[2]*1000:.2f}mm, B={obs[3]*1000:.2f}mm")
+print(f"  Velocities: CR={obs[4]*1000:.2f}mm/s, CL={obs[5]*1000:.2f}mm/s, F={obs[6]*1000:.2f}mm/s, B={obs[7]*1000:.2f}mm/s")
+print(f"  Average gap: {np.mean(obs[:4])*1000:.2f} mm")
+
+# Run a few steps with constant action to test force application
+print("\nRunning test episode...")
+for step in range(500):
+    # Apply constant moderate PWM to all 4 coils
+    # 50% PWM should generate current that produces upward force
+    action = np.array([0.95,0.95,-0.95,-0.95], dtype=np.float32)
+    
+    obs, reward, terminated, truncated, info = env.step(action)
+    
+    if step % 5 == 0:
+        print(f"\nStep {step} (t={step/240:.2f}s):")
+        print(f"  Sensor gaps: CR={obs[0]*1000:.2f}mm, CL={obs[1]*1000:.2f}mm, " +
+              f"F={obs[2]*1000:.2f}mm, B={obs[3]*1000:.2f}mm")
+        print(f"  Velocities: CR={obs[4]*1000:.2f}mm/s, CL={obs[5]*1000:.2f}mm/s, " +
+              f"F={obs[6]*1000:.2f}mm/s, B={obs[7]*1000:.2f}mm/s")
+        print(f"  Yoke gaps: front={info['gap_front_yoke']*1000:.2f}mm, back={info['gap_back_yoke']*1000:.2f}mm")
+        print(f"  Roll: {np.degrees(info['roll']):.2f}°")
+        print(f"  Currents: FL={info['curr_front_L']:.2f}A, FR={info['curr_front_R']:.2f}A, " +
+              f"BL={info['curr_back_L']:.2f}A, BR={info['curr_back_R']:.2f}A")
+        print(f"  Forces: front={info['force_front']:.2f}N, back={info['force_back']:.2f}N")
+        print(f"  Torques: front={info['torque_front']:.2f}mN·m, back={info['torque_back']:.2f}mN·m")
+        print(f"  Reward: {reward:.2f}")
+    
+    if terminated or truncated:
+        print(f"\nEpisode terminated at step {step}")
+        break
+
+print("\n" + "=" * 60)
+print("Test complete!")
+print("=" * 60)
+
+env.close()

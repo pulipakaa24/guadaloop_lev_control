@@ -1,0 +1,23 @@
+class MagLevCoil:
+    def __init__(self, r_resistance, l_inductance, source_voltage, maxCurrent):
+        self.R = r_resistance
+        self.L = l_inductance
+        self.current = 0.0
+        self.Vs = source_voltage
+        self.Imax = maxCurrent
+    
+    def update(self, pwm_duty_cycle, dt):
+        """
+        Simulates the coil circuit and force generation.
+        pwm_duty_cycle: -1.0 to 1.0
+        """
+        # Simple First-order RL circuit approximation
+        # V_in = Duty * V_source
+        voltage = pwm_duty_cycle * self.Vs
+        
+        # di/dt = (V - I*R) / L
+        di = (voltage - self.current * self.R) / self.L
+        self.current += di * dt
+        self.current = min(max(-self.Imax, self.current), self.Imax)
+        
+        return self.current

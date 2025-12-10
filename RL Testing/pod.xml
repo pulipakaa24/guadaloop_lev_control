@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<robot name="lev_pod">
+  <link name="base_link">
+    <inertial>
+      <mass value="5.8"/>
+      <inertia ixx="0.0192942414" ixy="0.0" ixz="0.0" iyy="0.130582305" iyz="0.0" izz="0.13760599326"/>
+    </inertial>
+    
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.009525"/>
+      <geometry> <box size="0.6096 0.0862 0.01905"/> </geometry>
+    </collision>
+    
+    <!-- Bolts -->
+    <collision>
+      <origin rpy="0 0 0" xyz="0.285 0.03 0.09585"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.285 -0.03 0.09585"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.285 0.03 0.09585"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.285 -0.03 0.09585"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+
+    <!-- Yoke Tops -->
+    <collision>
+      <origin rpy="0 0 0" xyz="0.1259 0.0508 0.08585"/>
+      <geometry><box size="0.0254 0.0254 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.1259 -0.0508 0.08585"/>
+      <geometry><box size="0.0254 0.0254 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.1259 0.0508 0.08585"/>
+      <geometry><box size="0.0254 0.0254 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.1259 -0.0508 0.08585"/>
+      <geometry><box size="0.0254 0.0254 0.01"/></geometry>
+    </collision>
+    
+    <!-- Sensor Tops -->
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.0508 0.08585"/>
+      <geometry><cylinder length="0.01" radius="0.015"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.0508 0.08585"/>
+      <geometry><cylinder length="0.01" radius="0.015"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.2366 0 0.08585"/>
+      <geometry><cylinder length="0.01" radius="0.015"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.2366 0 0.08585"/>
+      <geometry><cylinder length="0.01" radius="0.015"/></geometry>
+    </collision>
+  </link>
+</robot>
