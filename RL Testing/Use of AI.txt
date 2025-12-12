@@ -1,0 +1,121 @@
+[1]. Tool: Gemini
+     Prompt:  Could you please set up my RL training environment to load the URDF file I created for my maglev pod and 
+              put a track above it? This should all be done in PyBullet simulation, using the maglev_predictor and 
+              mag_lev_coil files I have provided. The agent should have access to an observation space with 4 gap
+              heights and 4 gap height velocities from the sim, and should be able to output 4 PWM values as actions.
+     Output:
+        # --- 1. Define Action & Observation Spaces ---
+        # Action: 4 PWM duty cycles between -1 and 1 (4 independent coils)
+        # [front_left, front_right, back_left, back_right] corresponding to +Y and -Y ends of each U-yoke
+        self.action_space = spaces.Box(low=-1, high=1, shape=(4,), dtype=np.float32)
+        
+        # Observation: 4 normalized noisy sensor gap heights + 4 normalized velocities
+        # Gaps normalized by 0.030m, velocities by 0.1 m/s
+        self.observation_space = spaces.Box(low=-5.0, high=5.0, shape=(8,), dtype=np.float32)
+        
+        # --- 2. Setup Physics & Actuators ---
+        self.dt = 1./240.  # PyBullet default timestep
+        self.coil_front_L = MagLevCoil(1.1, 0.0025, 12, 10.2)  # From your specs
+        self.coil_front_R = MagLevCoil(1.1, 0.0025, 12, 10.2)
+        self.coil_back_L = MagLevCoil(1.1, 0.0025, 12, 10.2)
+        self.coil_back_R = MagLevCoil(1.1, 0.0025, 12, 10.2)
+        
+        # Sensor noise parameters
+        self.sensor_noise_std = 0.0001  # 0.1mm standard deviation
+        
+        # Normalization constants for observations
+        self.gap_scale = 0.015  # Normalize gaps by +-15mm max expected deviation from middle
+        self.velocity_scale = 0.1  # Normalize velocities by 0.1 m/s max expected velocity
+        
+        # Maglev force/torque predictor
+        self.predictor = MaglevPredictor()
+        
+        # Connect to PyBullet (DIRECT is faster for training, GUI for debugging)
+        self.client = p.connect(p.GUI if use_gui else p.DIRECT) 
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        
+        # Store references
+        self.trackId = None
+        self.podId = None
+        self.collision_local_positions = []
+        self.yoke_indices = []  # For force application
+        self.yoke_labels = []
+        self.sensor_indices = []  # For gap height measurement
+        self.sensor_labels = []
+        
+        # For velocity calculation
+        self.prev_sensor_gaps = None
+
+        
+    def reset(self, seed=None, options=None):
+        # Reset PyBullet simulation
+        p.resetSimulation(physicsClientId=self.client)
+        p.setGravity(0, 0, -9.81, physicsClientId=self.client)
+        p.setTimeStep(self.dt, physicsClientId=self.client)
+        
+        # Create the maglev track (inverted system - track above, pod hangs below)
+        # Track bottom surface at Z=0
+        track_collision = p.createCollisionShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=[1.0, 0.2, 0.010],
+            physicsClientId=self.client
+        )
+        track_visual = p.createVisualShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=[1.0, 0.2, 0.010],
+            rgbaColor=[0.3, 0.3, 0.3, 0.8],
+            physicsClientId=self.client
+        )
+        self.trackId = p.createMultiBody(
+            baseMass=0,  # Static
+            baseCollisionShapeIndex=track_collision,
+            baseVisualShapeIndex=track_visual,
+            basePosition=[0, 0, 0.010],  # Track center at Z=10mm, bottom at Z=0
+            physicsClientId=self.client
+        )
+        p.changeDynamics(self.trackId, -1, 
+                         lateralFriction=0.3,
+                         restitution=0.1,
+                         physicsClientId=self.client)
+
+        start_pos = [0, 0, start_z]
+        start_orientation = p.getQuaternionFromEuler([0, 0, 0])
+        self.podId = p.loadURDF(urdf_path, start_pos, start_orientation, physicsClientId=self.client)
+
+[2]. Tool: Gemini
+      Prompt: 
+      Output:
+        # Parse collision shapes to identify yokes and sensors
+        collision_shapes = p.getCollisionShapeData(self.podId, -1, physicsClientId=self.client)
+        self.collision_local_positions = []
+        self.yoke_indices = []
+        self.yoke_labels = []
+        self.sensor_indices = []
+        self.sensor_labels = []
+        
+        # Expected heights for detection
+        expected_yoke_sensor_z = 0.08585  # Yokes and sensors always at this height
+        expected_bolt_z = 0.08585 + self.initial_gap_mm / 1000.0  # Bolts at gap-dependent height
+        
+        for i, shape in enumerate(collision_shapes):
+            shape_type = shape[2]
+            local_pos = shape[5]
+            self.collision_local_positions.append(local_pos)
+            
+            # Check if at sensor/yoke height (Z ≈ 0.08585m) - NOT bolts
+            if abs(local_pos[2] - expected_yoke_sensor_z) < 0.001:
+                if shape_type == p.GEOM_BOX:
+                    # Yokes are BOX type at the four corners (size 0.0254)
+                    self.yoke_indices.append(i)
+                    x_pos = "Front" if local_pos[0] > 0 else "Back"
+                    y_pos = "Left" if local_pos[1] > 0 else "Right"
+                    self.yoke_labels.append(f"{x_pos}_{y_pos}")
+                elif shape_type == p.GEOM_CYLINDER or shape_type == p.GEOM_MESH:
+                    # Sensors: distinguish by position pattern
+                    if abs(local_pos[0]) < 0.06 or abs(local_pos[1]) < 0.02:
+                        self.sensor_indices.append(i)
+                        if abs(local_pos[0]) < 0.001:  # Center sensors (X ≈ 0)
+                            label = "Center_Right" if local_pos[1] > 0 else "Center_Left"
+                        else:  # Front/back sensors (Y ≈ 0)
+                            label = "Front" if local_pos[0] > 0 else "Back"
+                        self.sensor_labels.append(label)

@@ -5,6 +5,7 @@ Runs a simple episode with constant actions to verify the environment works
 
 from lev_pod_env import LevPodEnv
 import numpy as np
+import time
 
 # Create environment with GUI for visualization
 env = LevPodEnv(use_gui=True, initial_gap_mm=15)
@@ -30,7 +31,7 @@ print("\nRunning test episode...")
 for step in range(500):
     # Apply constant moderate PWM to all 4 coils
     # 50% PWM should generate current that produces upward force
-    action = np.array([0.95,0.95,-0.95,-0.95], dtype=np.float32)
+    action = np.array([0,0,0,0], dtype=np.float32)
     
     obs, reward, terminated, truncated, info = env.step(action)
     
@@ -51,6 +52,8 @@ for step in range(500):
     if terminated or truncated:
         print(f"\nEpisode terminated at step {step}")
         break
+    
+    time.sleep(0.01)
 
 print("\n" + "=" * 60)
 print("Test complete!")

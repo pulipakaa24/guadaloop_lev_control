@@ -10,34 +10,37 @@ from maglev_predictor import MaglevPredictor
 TARGET_GAP = 16.491741 / 1000 # target gap height for 5.8 kg pod in meters
 
 class LevPodEnv(gym.Env):
-    def __init__(self, use_gui=False, initial_gap_mm=10.0):
+    def __init__(self, use_gui=False, initial_gap_mm=10.0, max_steps=2000):
         super(LevPodEnv, self).__init__()
         
         # Store initial gap height parameter
         self.initial_gap_mm = initial_gap_mm
+        self.max_episode_steps = max_steps
+        self.current_step = 0
         
+        # The following was coded by AI - see [1]
         # --- 1. Define Action & Observation Spaces ---
         # Action: 4 PWM duty cycles between -1 and 1 (4 independent coils)
         # [front_left, front_right, back_left, back_right] corresponding to +Y and -Y ends of each U-yoke
         self.action_space = spaces.Box(low=-1, high=1, shape=(4,), dtype=np.float32)
         
-        # Observation: 4 noisy sensor gap heights + 4 velocities
-        # [sensor_center_right, sensor_center_left, sensor_front, sensor_back,
-        #  vel_center_right, vel_center_left, vel_front, vel_back]
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(8,), dtype=np.float32)
+        # Observation: 4 normalized noisy sensor gap heights + 4 normalized velocities
+        # Gaps normalized by 0.030m, velocities by 0.1 m/s
+        self.observation_space = spaces.Box(low=-5.0, high=5.0, shape=(8,), dtype=np.float32)
         
         # --- 2. Setup Physics & Actuators ---
         self.dt = 1./240.  # PyBullet default timestep
-        # Four coils: one for each end of the two U-shaped yokes
-        # Front yoke: left (+Y) and right (-Y) ends
-        # Back yoke: left (+Y) and right (-Y) ends
-        self.coil_front_L = MagLevCoil(1.1, 0.0025, 12, 10.2)  # From your specs
+        self.coil_front_L = MagLevCoil(1.1, 0.0025, 12, 10.2)
         self.coil_front_R = MagLevCoil(1.1, 0.0025, 12, 10.2)
         self.coil_back_L = MagLevCoil(1.1, 0.0025, 12, 10.2)
         self.coil_back_R = MagLevCoil(1.1, 0.0025, 12, 10.2)
         
         # Sensor noise parameters
         self.sensor_noise_std = 0.0001  # 0.1mm standard deviation
+        
+        # Normalization constants for observations
+        self.gap_scale = 0.015  # Normalize gaps by +-15mm max expected deviation from middle
+        self.velocity_scale = 0.1  # Normalize velocities by 0.1 m/s max expected velocity
         
         # Maglev force/torque predictor
         self.predictor = MaglevPredictor()
@@ -89,17 +92,23 @@ class LevPodEnv(gym.Env):
                          restitution=0.1,
                          physicsClientId=self.client)
         
-        # Load pod URDF - hangs below track
-        # Create modified URDF with gap-dependent bolt positions
         urdf_path = self._create_modified_urdf()
         
-        # Calculate starting position based on desired initial gap
-        # Pod center Z = -(90.85mm + initial_gap_mm) / 1000
-        start_z = -(0.09085 + self.initial_gap_mm / 1000.0)
+        # Determine start condition
+        if np.random.rand() > 0.5:
+            # Spawn exactly at target
+            spawn_gap_mm = TARGET_GAP * 1000.0
+            # # Add tiny noise
+            # spawn_gap_mm += np.random.uniform(-0.5, 0.5)
+        else:
+            spawn_gap_mm = self.initial_gap_mm
+            
+        start_z = -(0.09085 + spawn_gap_mm / 1000.0)
         start_pos = [0, 0, start_z]
         start_orientation = p.getQuaternionFromEuler([0, 0, 0])
         self.podId = p.loadURDF(urdf_path, start_pos, start_orientation, physicsClientId=self.client)
         
+        # The following was coded by AI - see [2]
         # Parse collision shapes to identify yokes and sensors
         collision_shapes = p.getCollisionShapeData(self.podId, -1, physicsClientId=self.client)
         self.collision_local_positions = []
@@ -135,23 +144,30 @@ class LevPodEnv(gym.Env):
                             label = "Front" if local_pos[0] > 0 else "Back"
                         self.sensor_labels.append(label)
         
-        # Reset coil states
         self.coil_front_L.current = 0
         self.coil_front_R.current = 0
         self.coil_back_L.current = 0
         self.coil_back_R.current = 0
         
-        # Reset velocity tracking
         self.prev_sensor_gaps = None
+        obs = self._get_obs(initial_reset=True)
+        self.current_step = 0
         
-        return self._get_obs(), {}
+        return obs, {}
 
     def step(self, action):
-        # --- 1. Update Coil Currents from PWM Actions ---
-        pwm_front_L = action[0]  # Front yoke, +Y end
-        pwm_front_R = action[1]  # Front yoke, -Y end
-        pwm_back_L = action[2]   # Back yoke, +Y end
-        pwm_back_R = action[3]   # Back yoke, -Y end
+        # Check if PyBullet connection is still active (GUI might be closed)
+        try:
+            p.getConnectionInfo(physicsClientId=self.client)
+        except p.error:
+            # Connection lost - GUI was closed
+            return self._get_obs(), -100.0, True, True, {'error': 'GUI closed'}
+        
+        # Update Coil Currents from PWM Actions
+        pwm_front_L = action[0]  # yoke +x,+y
+        pwm_front_R = action[1]  # yoke +x,-y
+        pwm_back_L = action[2]   # yoke -x,+y
+        pwm_back_R = action[3]   # yoke -x,-y
         
         curr_front_L = self.coil_front_L.update(pwm_front_L, self.dt)
         curr_front_R = self.coil_front_R.update(pwm_front_R, self.dt)
@@ -190,34 +206,27 @@ class LevPodEnv(gym.Env):
         avg_gap_back = (yoke_gap_heights_dict.get('Back_Left', 0.010) + 
                        yoke_gap_heights_dict.get('Back_Right', 0.010)) / 2
         
-        # Calculate roll angle from yoke end positions
-        # Roll = arctan((right_z - left_z) / y_distance)
-        # Average front and back measurements
         front_left_gap = yoke_gap_heights_dict.get('Front_Left', 0.010)
         front_right_gap = yoke_gap_heights_dict.get('Front_Right', 0.010)
         back_left_gap = yoke_gap_heights_dict.get('Back_Left', 0.010)
         back_right_gap = yoke_gap_heights_dict.get('Back_Right', 0.010)
         
-        # Rigid body distances (hypotenuses - don't change with rotation)
+        # hypotenuses
         y_distance = 0.1016  # 2 * 0.0508m (left to right distance)
         x_distance = 0.2518  # 2 * 0.1259m (front to back distance)
         
-        # Roll angle (rotation about X-axis) - using arcsin since y_distance is the hypotenuse
-        # When right side has larger gap (higher), roll is negative (right-side-up convention)
+        # Roll angle
+        # When right side has larger gap, roll is negative
         roll_angle_front = np.arcsin(-(front_right_gap - front_left_gap) / y_distance)
         roll_angle_back = np.arcsin(-(back_right_gap - back_left_gap) / y_distance)
         roll_angle = (roll_angle_front + roll_angle_back) / 2
         
-        # Pitch angle (rotation about Y-axis) - using arcsin since x_distance is the hypotenuse
-        # When back has larger gap (higher), pitch is positive (nose-down convention)
+        # When back has larger gap, pitch is positive
         pitch_angle_left = np.arcsin((back_left_gap - front_left_gap) / x_distance)
         pitch_angle_right = np.arcsin((back_right_gap - front_right_gap) / x_distance)
         pitch_angle = (pitch_angle_left + pitch_angle_right) / 2
         
-        # --- 4. Predict Forces and Torques using Maglev Predictor ---
-        # Currents can be positive or negative (as seen in CSV data)
-        # Positive weakens permanent magnet field, negative strengthens it
-        
+        # Predict Forces and Torques using Maglev Predictor
         # Gap heights in mm
         gap_front_mm = avg_gap_front * 1000
         gap_back_mm = avg_gap_back * 1000
@@ -226,12 +235,12 @@ class LevPodEnv(gym.Env):
         roll_deg = np.degrees(roll_angle)
         
         # Predict force and torque for each U-shaped yoke
-        # Front yoke (at X = +0.1259m)
+        # Front yoke
         force_front, torque_front = self.predictor.predict(
             curr_front_L, curr_front_R, roll_deg, gap_front_mm
         )
         
-        # Back yoke (at X = -0.1259m)
+        # Back yoke
         force_back, torque_back = self.predictor.predict(
             curr_back_L, curr_back_R, roll_deg, gap_back_mm
         )
@@ -283,19 +292,21 @@ class LevPodEnv(gym.Env):
         
         # --- 6. Step Simulation ---
         p.stepSimulation(physicsClientId=self.client)
+        self.current_step += 1
+        
+        # Check for physical contact with track (bolts touching)
+        contact_points = p.getContactPoints(bodyA=self.podId, bodyB=self.trackId, physicsClientId=self.client)
+        has_contact = len(contact_points) > 0
         
         # --- 7. Get New Observation ---
         obs = self._get_obs()
         
         # --- 8. Calculate Reward ---
-        # Goal: Hover at target gap (10mm = 0.010m), minimize roll, minimize power
-        target_gap = TARGET_GAP  # 10mm in meters
+        # Goal: Hover at target gap (16.5mm), minimize roll/pitch, minimize power
+        target_gap = TARGET_GAP  # 16.5mm in meters
         avg_gap = (avg_gap_front + avg_gap_back) / 2
         
         gap_error = abs(avg_gap - target_gap)
-        roll_error = abs(roll_angle)
-        pitch_error = abs(pitch_angle)
-        z_vel_penalty = abs(lin_vel[2])
         
         # Power dissipation (all 4 coils)
         power = (curr_front_L**2 * self.coil_front_L.R + 
@@ -303,31 +314,49 @@ class LevPodEnv(gym.Env):
                 curr_back_L**2 * self.coil_back_L.R +
                 curr_back_R**2 * self.coil_back_R.R)
         
-        # Reward function
-        reward = 1.0
-        reward -= gap_error * 100  # Penalize gap error heavily
-        reward -= roll_error * 50   # Penalize roll (about X-axis)
-        reward -= pitch_error * 50  # Penalize pitch (about Y-axis)
-        reward -= z_vel_penalty * 10  # Penalize vertical motion
-        reward -= power * 0.01  # Small penalty for power usage
+        # --- Improved Reward Function ---
+        # Use reward shaping with reasonable scales to enable learning
         
-        # --- 9. Check Termination ---
+        # 1. Gap Error Reward (most important)
+        # Use exponential decay for smooth gradient near target
+        gap_error_mm = gap_error * 1000  # Convert to mm
+        gap_reward = 10.0 * np.exp(-0.5 * (gap_error_mm / 3.0)**2)  # Peak at 0mm error, 3mm std dev
+        
+        # 2. Orientation Penalties (smaller scale)
+        roll_penalty = abs(np.degrees(roll_angle)) * 0.02
+        pitch_penalty = abs(np.degrees(pitch_angle)) * 0.02
+        
+        # 3. Velocity Penalty (discourage rapid oscillations)
+        z_velocity = lin_vel[2]
+        velocity_penalty = abs(z_velocity) * 0.1
+        
+        # 4. Contact Penalty
+        contact_points = p.getContactPoints(bodyA=self.podId, bodyB=self.trackId)
+        contact_penalty = len(contact_points) * 0.2
+        
+        # 5. Power Penalty (encourage efficiency, but small weight)
+        power_penalty = power * 0.001
+        
+        # Combine rewards (scaled to ~[-5, +1] range per step)
+        reward = gap_reward - roll_penalty - pitch_penalty - velocity_penalty - contact_penalty - power_penalty
+        
+        # Check Termination (tighter bounds for safety)
         terminated = False
         truncated = False
         
-        # Check if pod crashed or flew away
-        if avg_gap < 0.002 or avg_gap > 0.030:  # Outside 2-30mm range
+        # Terminate if gap is too small (crash) or too large (lost)
+        if avg_gap < 0.003 or avg_gap > 0.035:
             terminated = True
-            reward -= 100
-        
-        # Check if pod rolled or pitched too much
-        if abs(roll_angle) > np.radians(10):  # More than 10 degrees roll
+            reward = -10.0  # Failure penalty (scaled down)
+            
+        # Terminate if orientation is too extreme
+        if abs(roll_angle) > np.radians(15) or abs(pitch_angle) > np.radians(15):
             terminated = True
-            reward -= 50
-        
-        if abs(pitch_angle) > np.radians(10):  # More than 10 degrees pitch
-            terminated = True
-            reward -= 50
+            reward = -10.0
+            
+        # Success bonus for stable hovering near target
+        if gap_error_mm < 1.0 and abs(np.degrees(roll_angle)) < 2.0 and abs(np.degrees(pitch_angle)) < 2.0:
+            reward += 2.0  # Bonus for excellent control
         
         info = {
             'curr_front_L': curr_front_L,
@@ -345,7 +374,7 @@ class LevPodEnv(gym.Env):
         
         return obs, reward, terminated, truncated, info
 
-    def _get_obs(self):
+    def _get_obs(self, initial_reset=False):
         """
         Returns observation: [gaps(4), velocities(4)]
         Uses noisy sensor readings + computed velocities for microcontroller-friendly deployment
@@ -372,7 +401,8 @@ class LevPodEnv(gym.Env):
             
             # Add measurement noise
             noisy_gap = gap_height + np.random.normal(0, self.sensor_noise_std)
-            sensor_gap_heights[self.sensor_labels[i]] = noisy_gap
+            # sensor_gap_heights[self.sensor_labels[i]] = noisy_gap
+            sensor_gap_heights[self.sensor_labels[i]] = gap_height
         
         # Pack sensor measurements in consistent order
         # [center_right, center_left, front, back]
@@ -384,7 +414,7 @@ class LevPodEnv(gym.Env):
         ], dtype=np.float32)
         
         # Compute velocities (d_gap/dt)
-        if self.prev_sensor_gaps is None:
+        if initial_reset or (self.prev_sensor_gaps is None):
             # First observation - no velocity information yet
             velocities = np.zeros(4, dtype=np.float32)
         else:
@@ -394,8 +424,12 @@ class LevPodEnv(gym.Env):
         # Store for next step
         self.prev_sensor_gaps = gaps.copy()
         
-        # Concatenate: [gaps, velocities]
-        obs = np.concatenate([gaps, velocities])
+        # Normalize observations
+        gaps_normalized = (gaps - TARGET_GAP) / self.gap_scale
+        velocities_normalized = velocities / self.velocity_scale
+        
+        # Concatenate: [normalized_gaps, normalized_velocities]
+        obs = np.concatenate([gaps_normalized, velocities_normalized])
         
         return obs
     
@@ -439,7 +473,10 @@ class LevPodEnv(gym.Env):
         return temp_urdf_path
 
     def close(self):
-        p.disconnect(physicsClientId=self.client)
+        try:
+            p.disconnect(physicsClientId=self.client)
+        except p.error:
+            pass  # Already disconnected
     
     def render(self):
         """Rendering is handled by PyBullet GUI mode"""

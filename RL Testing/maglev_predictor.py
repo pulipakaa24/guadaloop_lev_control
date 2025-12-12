@@ -1,143 +1,116 @@
 """
 Magnetic Levitation Force and Torque Predictor
-Generated from polynomial regression model (degree 6)
+Optimized Inference using Pre-Trained Scikit-Learn Model
 
-Performance:
-  - Force R²: 0.999967
-  - Torque R²: 0.999895
+This module loads a saved .pkl model (PolynomialFeatures + LinearRegression)
+and executes predictions using optimized NumPy vectorization for high-speed simulation.
 
 Usage:
-    predictor = MaglevPredictor()
+    predictor = MaglevPredictor("maglev_model.pkl")
     force, torque = predictor.predict(currL=-15, currR=-15, roll=1.0, gap_height=10.0)
 """
 
 import numpy as np
-from itertools import combinations_with_replacement
+import joblib
+import os
 
 class MaglevPredictor:
-    def __init__(self):
-        """Initialize the magnetic levitation force/torque predictor."""
-        self.degree = 6
-        self.n_features = 4  # currL, currR, roll, invGap
-
-        # Force model coefficients
-        self.force_intercept = -13.86435113666004
-        self.force_coef = np.array([0.02658759005681468, 0.34900946839988667, 0.34444750510058214, 1.2230036394034724e-06, 634.0439835577899, 0.02080813487961144, -0.0008293737853954218, 0.022629965277837213, -14.941724689144115, 0.021137542187404268, -0.022629909674164422, -14.83489069081782, -0.73648243491197, -5.086269823986137e-06, 1376.7215457108907, -0.00011531764430729397, 7.297141435376426e-05, 5.485819913861908e-06, -1.0521911302922329, 5.2347676613358446e-05, 4.3360048841353804e-11, 0.03267811924240215, -0.006301758632290206, -0.26462568844868134, -29.51081695655865, -7.215211603545774e-05, -5.4850515695552184e-06, -1.0708823138271693, -0.00639147818385613, 0.2646251877739306, -30.235017153007778, -1.876003092129465e-09, 25.797307227256603, -9.502166033167048e-06, -5340.1478288789385, 1.3321592142734318e-06, 3.215276208834439e-06, 1.2629338780878463e-05, 0.0017892414904374793, 3.0619588116120866e-06, -1.5533773078946211e-07, -0.0010714898932605993, 8.771394384172321e-05, 0.0045854174470491334, 20.746027467741882, 3.865546883474735e-06, 1.5529474017839107e-07, -0.0007041149350807824, -3.826159128179907e-05, -4.0568953404984676e-10, 0.706467757753534, -0.0025574385229880613, -0.03335549183229827, -21.337761439975633, 123.43467940890098, 7.760241165222226e-07, -1.2629374732231469e-05, 0.0008614797170750643, 8.013084143393412e-05, -0.004585417820981331, 21.139446361522204, 0.0025574386461146674, -0.02985744313710574, 21.337761466031953, 125.14914334885628, 0.029443521274208746, -1.4431913766257617e-09, -235.63989509335445, 5.908485145948768e-05, -2235.4096760821767, 3.111734585559134e-07, -1.8749393149164462e-07, -8.520634864339627e-08, -6.386995447682509e-05, -1.4911356771563078e-07, 1.7060130552692954e-07, -7.426223970874446e-06, 7.239854511453814e-07, 2.184161596530121e-05, -0.003435810422541666, -1.641718938572012e-07, 5.542233338928781e-13, 3.63858792575833e-05, 5.292425733216533e-07, 8.546867872594177e-05, 0.004557337090434387, -2.9680832541068014e-05, -0.0037951782802951306, 0.04771712476195161, -146.08679080513647, -1.237001185927511e-07, -1.706171968152148e-07, -1.3936677144776866e-05, 4.590760820377682e-07, -8.54684555038343e-05, 0.0016991681189930247, -4.5288217620509386e-12, -0.0003737298107907294, -1.625876064944437e-08, -7.59874998546124, 0.000665088457289631, 0.0963780640278282, 2.443530344020863, 126.64935400088703, 51.887534931799024, 2.3180072616924008e-07, 8.521306682496288e-08, -6.923360173516357e-05, 7.560505927983741e-07, -2.184142082528595e-05, 0.0031131690666277717, 2.9680844979562693e-05, -0.003729220721386678, -0.04771714589381877, -149.23564872315535, 0.0006654036357616189, -0.0963780608814031, 2.3836954373862396, -126.64935179224206, 52.62737504907853, -5.00320618268546e-12, -1.0417152979422686, -1.0339665214713118e-07, 920.5602713711495, -0.0003583524071162497, -596.231639923794, 2.976548785227351e-09, -6.226855475688353e-09, -3.717561014582316e-08, -3.1125642472318304e-06, -9.987900284613715e-09, -1.3295888834363723e-08, 2.2609761671787965e-06, 2.4095157868941897e-08, 2.5320743457513117e-06, 0.0002053267414218185, -7.040462435270456e-09, 1.1958917411902803e-08, 1.9188907920408838e-06, 6.364859927998623e-08, -3.365889105211295e-06, 1.0594078015402353e-05, -2.5936621739219845e-07, -7.222719128563426e-06, 9.687272945516079e-05, 0.008542285480039293, -1.0519471516090562e-08, -1.1958789514210366e-08, 2.1222848793911453e-06, 4.494913952157731e-08, -1.368860580441833e-11, -0.00012807995660391036, 5.7690230814699817e-08, -1.477740339117517e-05, -0.0002544987474469851, -0.012272472027901347, 8.828768538471365e-07, 0.0004458604644176356, 0.03857698340149728, 0.3404446128948046, 359.5009507741528, -8.497181624989025e-09, 1.3292961398292391e-08, 1.7031788637211775e-06, 7.004756952255775e-08, 3.3659403024799417e-06, 6.890026536654492e-05, -5.7663427810439316e-08, -1.4623648040501536e-05, 0.0002544970475037711, -0.0010592495918368677, 1.0484938357535611e-06, 1.11551434756052e-10, 0.00563700298358414, 6.777939510777681e-08, 22.92320865247384, -2.342015012568588e-05, -0.009273996980515453, -0.7408042760765321, -21.75687783472069, -359.2904707728828, 13.909419135663944, 6.161826604511589e-09, 3.7175375666720356e-08, -2.18264751694619e-06, 3.087993150074908e-08, -2.532056053716758e-06, 0.00020057671003725908, 2.5937900716144213e-07, -7.915630708232868e-06, -9.687398982230477e-05, -0.011576477637831827, 1.0210671073096478e-06, -0.0004458603903605418, 0.038287496092621776, -0.34044451889358196, 368.1499228308273, 2.3420170015442388e-05, -0.009233730397613549, 0.7408042665232676, -21.520948405309664, 359.29046253155633, 14.109330328817938, 0.00017232856282973358, 3.7743741378853946e-10, 7.422994835173395, 4.4725972783587505e-07, 400.58822663103115, 0.0007277763198683137, -131.51558882445943])
-
-        # Torque model coefficients  
-        self.torque_intercept = -2.130143560243341
-        self.torque_coef = np.array([-0.43082063184443115, 12.736757164929834, -13.08252780522135, -13.305640830162647, 44.15155732224114, -0.06392352126218698, -0.011560340466877903, 1.8386367631578204, -459.22646547585083, 0.09823332452981008, 1.8386366778415446, 472.3689699641128, 0.9121471971798599, -1074.954075326984, -174.3530855725946, 0.0013682631086306893, 0.00195323147528499, 0.01965729552466329, 2.0525264006051005, -0.002008794556361812, -0.007770222019582218, 0.4678349249240797, -0.1569777322000716, -25.27902517575704, -2679.628866357242, -0.0006939851572283426, 0.019657295060090646, -3.113696029777825, 0.18298184295583028, -25.279024891306417, 2538.618446083044, 0.6297471362593584, -13.210276906344967, 47007.171225763355, -335.5527948647765, -0.00014304959219657576, -1.6606984310385542e-05, -0.0001288652013009539, 0.00601442858932888, 1.2945205369874202e-05, -0.0005177649120771122, -0.03856858837487831, 0.005216673005071559, -0.6211725496051428, 90.62092408067234, 1.3225382957671172e-06, -0.0005177654090040562, 0.04226634605293933, -0.00022044202681437142, 0.24508905440265927, -4.916014084022514, -0.1729589768066897, -6.749482388553274, -864.2729715937271, 8596.591212657508, -1.655038732195635e-05, -0.0001288644846688669, -0.030326086023246823, -0.005117587667626822, -0.621172555106164, -75.00494387398975, -0.1729589774841953, 5.728917556637661, -864.2729717790494, -8155.426251781266, -0.0808900322736339, 174.6241758121025, 59.54805506962735, -91016.54919618473, -124.62007434011727, -1.2219265101975907e-05, -6.313054797146833e-06, 5.149063326825853e-07, 0.0011879009736119883, -1.095400741668584e-06, -5.842468624450703e-06, 0.0025831102861104682, 7.925225867211338e-05, -0.0017220993515252303, -0.40028230028630435, 1.708059588878541e-06, -7.89357554253911e-06, -0.00032317627449174324, 9.975362360137296e-05, 0.0072170441199936874, 0.5449500218329268, -0.0015381145174586663, -0.19907587927007642, 10.517966687101838, -597.1622745919876, 5.7685155923081766e-06, -5.842469306571729e-06, -0.0031387751925677776, -9.262773397722412e-05, 0.007217044114035787, -0.5411230562086828, -3.150811562946387e-05, -0.00016976667267920575, -2.397689451813074, 20.162839703934328, 0.03054125251259876, 6.090989540908742, 186.86477056827312, 5456.995941705915, 3652.133600981146, 1.2356778199773544e-05, 5.149040589458309e-07, -0.00032098590758522505, -9.50427686632338e-05, -0.0017220995243967252, 0.6561577426235301, -0.001538114514769262, 0.20395968177578583, 10.517966698254375, 498.3704223462871, -0.03069428826677889, 6.090989540411657, -177.12280909537836, 5456.995943453175, -3464.337190929767, -0.31967284320394906, 0.7246542873326733, -3769.4439964810213, 44.429029612632434, -39730.668497436134, -31.81356580437269, 2.0552249679894885e-07, -2.2809068411788758e-07, -1.3383481700657285e-07, 0.00016049741088863811, -5.645338205795269e-07, 2.603157440717041e-07, 1.2741259467929922e-05, 2.8978208774788072e-06, -9.343648642357039e-05, -0.003248922547916422, 3.8025689264031826e-09, 1.759924543875968e-07, 2.496429428333613e-05, 1.1286853833780697e-06, 4.5304974111815e-05, -0.015200557860030273, 2.7490249294714886e-06, -0.0008249120055054959, 0.023944368570084418, 1.2946941017176763, 5.921153842791682e-07, 1.7599268176127225e-07, -3.777398643478591e-05, -7.73167698753241e-08, 0.00016224414804355547, 0.001111905663689683, -1.8224227460450493e-08, -0.0011582951120296947, -0.02742388816863306, -1.837576623417497, 1.8148104558690648e-05, 0.025582355960430903, 1.8719555164625814, -7.937558866365559, 1385.1611007390925, 3.657347065200156e-07, 2.6031784727820195e-07, -1.3743697138579591e-05, -1.1634339003308014e-06, 4.530497474064532e-05, 0.017827373735151752, -1.8219452613266185e-08, 0.001031106311321306, -0.02742388829348119, 1.820203067929913, 1.4693896147832675e-05, 0.0020392437766894034, -0.005130454763727088, 13.585039595374047, -25.31279841776285, -0.0012892921066907093, -0.4274487957111246, -45.23013966729996, -1269.1925481953558, -17946.91153301551, 982.0037387495227, 1.4403133263840573e-07, -1.3383731811700272e-07, -0.00015877734983860137, -1.8463729247741867e-06, -9.343645731973993e-05, -0.0020059852415403867, 2.749025497905677e-06, 0.0010293765766675733, 0.023944368343614464, -2.1505766814479212, -4.805005990249356e-05, 0.025582355962653125, -1.892578794851199, -7.937558866690216, -1145.7281610448965, -0.0012892921109930455, 0.4357010899616349, -45.230139667527084, 1235.618203650514, -17946.91153617443, -931.5738949974703, 0.001988793818171075, 4.153241810706205, -3.712809616304644, 19150.57072348241, 19.562114898868295, -10765.823486744783, -6.8540018643406935])
-
-    def _polynomial_features(self, X):
+    def __init__(self, model_path='maglev_model.pkl'):
         """
-        Generate polynomial features up to specified degree.
-        Mimics sklearn's PolynomialFeatures with include_bias=True.
-
-        Args:
-            X: numpy array of shape (n_samples, 4) with [currL, currR, roll, invGap]
-
-        Returns:
-            Polynomial features array
+        Initialize predictor by loading the pickle file and extracting
+        raw matrices for fast inference.
         """
-        n_samples = X.shape[0]
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file '{model_path}' not found. Please train and save the model first.")
 
-        # Start with bias term (column of ones)
-        features = [np.ones(n_samples)]
-
-        # Add original features
-        for i in range(self.n_features):
-            features.append(X[:, i])
-
-        # Add polynomial combinations
-        for deg in range(2, self.degree + 1):
-            for combo in combinations_with_replacement(range(self.n_features), deg):
-                term = np.ones(n_samples)
-                for idx in combo:
-                    term *= X[:, idx]
-                features.append(term)
-
-        return np.column_stack(features)
+        print(f"Loading maglev model from {model_path}...")
+        data = joblib.load(model_path)
+        
+        # 1. Extract Scikit-Learn Objects
+        poly_transformer = data['poly_features']
+        linear_model = data['model']
+        
+        # 2. Extract Raw Matrices for Speed (Bypasses sklearn overhead)
+        # powers_: Matrix of shape (n_output_features, n_input_features)
+        # Represents the exponents for each term. e.g. x1^2 * x2^1
+        self.powers = poly_transformer.powers_.T # Transpose for broadcasting
+        
+        # coef_: Shape (n_targets, n_output_features) -> (2, n_poly_terms)
+        self.coef = linear_model.coef_
+        
+        # intercept_: Shape (n_targets,) -> (2,)
+        self.intercept = linear_model.intercept_
+        
+        print(f"Model loaded. Degree: {data['degree']}")
+        print(f"Force R2: {data['performance']['force_r2']:.4f}")
+        print(f"Torque R2: {data['performance']['torque_r2']:.4f}")
 
     def predict(self, currL, currR, roll, gap_height):
         """
-        Predict force and torque for given operating conditions.
-
+        Fast single-sample prediction using pure NumPy.
+        
         Args:
-            currL: Left coil current in Amps
-            currR: Right coil current in Amps
-            roll: Roll angle in degrees
-            gap_height: Gap height in mm
-
+            currL, currR: Currents [A]
+            roll: Roll angle [deg]
+            gap_height: Gap [mm]
+            
         Returns:
-            tuple: (force [N], torque [mN·m])
+            (force [N], torque [mN·m])
         """
-        # Compute inverse gap (critical transformation!)
-        invGap = 1.0 / gap_height
+        # 1. Pre-process Input (Must match training order: currL, currR, roll, invGap)
+        # Clamp gap to avoid division by zero
+        safe_gap = max(gap_height, 1e-6)
+        invGap = 1.0 / safe_gap
+        
+        # Input Vector: shape (4,)
+        x = np.array([currL, currR, roll, invGap])
+        
+        # 2. Polynomial Expansion (Vectorized)
+        # Compute x^p for every term. 
+        # x is (4,), self.powers is (4, n_terms)
+        # Broadcasting: x[:, None] is (4,1). Result is (4, n_terms).
+        # Product along axis 0 reduces it to (n_terms,)
+        
+        # Note: This is equivalent to PolynomialFeatures.transform but 100x faster for single samples
+        poly_features = np.prod(x[:, None] ** self.powers, axis=0)
+        
+        # 3. Linear Prediction
+        # (2, n_terms) dot (n_terms,) -> (2,)
+        result = np.dot(self.coef, poly_features) + self.intercept
+        
+        return result[0], result[1]
 
-        # Create input array
-        X = np.array([[currL, currR, roll, invGap]])
-
-        # Generate polynomial features
-        X_poly = self._polynomial_features(X)
-
-        # Compute predictions
-        force = self.force_intercept + np.dot(X_poly, self.force_coef)[0]
-        torque = self.torque_intercept + np.dot(X_poly, self.torque_coef)[0]
-
-        return force, torque
-
-    def predict_batch(self, currL_array, currR_array, roll_array, gap_height_array):
+    def predict_batch(self, currL, currR, roll, gap_height):
         """
-        Predict force and torque for multiple operating conditions.
-
-        Args:
-            currL_array: Array of left coil currents [A]
-            currR_array: Array of right coil currents [A]
-            roll_array: Array of roll angles [deg]
-            gap_height_array: Array of gap heights [mm]
-
-        Returns:
-            tuple: (force_array [N], torque_array [mN·m])
+        Fast batch prediction for array inputs.
         """
-        # Convert to numpy arrays
-        currL_array = np.asarray(currL_array)
-        currR_array = np.asarray(currR_array)
-        roll_array = np.asarray(roll_array)
-        gap_height_array = np.asarray(gap_height_array)
-
-        # Compute inverse gaps
-        invGap_array = 1.0 / gap_height_array
-
-        # Stack into feature matrix
-        X = np.column_stack([currL_array, currR_array, roll_array, invGap_array])
-
-        # Generate polynomial features
-        X_poly = self._polynomial_features(X)
-
-        # Compute predictions
-        force_array = self.force_intercept + np.dot(X_poly, self.force_coef)
-        torque_array = self.torque_intercept + np.dot(X_poly, self.torque_coef)
-
-        return force_array, torque_array
-
+        # 1. Pre-process Inputs
+        gap_height = np.asarray(gap_height)
+        invGap = 1.0 / np.maximum(gap_height, 1e-6)
+        
+        # Stack inputs: shape (N, 4)
+        X = np.column_stack((currL, currR, roll, invGap))
+        
+        # 2. Polynomial Expansion
+        # X is (N, 4). Powers is (4, n_terms).
+        # We want (N, n_terms).
+        # Method: X[:, :, None] -> (N, 4, 1)
+        # Powers[None, :, :] -> (1, 4, n_terms)
+        # Power: (N, 4, n_terms)
+        # Prod axis 1: (N, n_terms)
+        poly_features = np.prod(X[:, :, None] ** self.powers[None, :, :], axis=1)
+        
+        # 3. Linear Prediction
+        # (N, n_terms) @ (n_terms, 2) + (2,)
+        result = np.dot(poly_features, self.coef.T) + self.intercept
+        
+        return result[:, 0], result[:, 1]
 
 if __name__ == "__main__":
-    # Example usage
-    predictor = MaglevPredictor()
-
-    # Single prediction
-    force, torque = predictor.predict(currL=-15, currR=-15, roll=1.0, gap_height=10.0)
-    print(f"Single prediction:")
-    print(f"  Force: {force:.2f} N")
-    print(f"  Torque: {torque:.2f} mN·m")
-
-    # Batch prediction
-    currL = np.array([-15, -15, -10])
-    currR = np.array([-15, -10, -10])
-    roll = np.array([0, 0.5, 1.0])
-    gap = np.array([10, 12, 15])
-
-    forces, torques = predictor.predict_batch(currL, currR, roll, gap)
-    print(f"\nBatch prediction:")
-    for i in range(len(forces)):
-        print(f"  Condition {i+1}: Force={forces[i]:.2f} N, Torque={torques[i]:.2f} mN·m")
+    # Test
+    try:
+        p = MaglevPredictor()
+        f, t = p.predict(-15, -15, 1.0, 10.0)
+        print(f"Force: {f:.3f}, Torque: {t:.3f}")
+    except FileNotFoundError as e:
+        print(e)

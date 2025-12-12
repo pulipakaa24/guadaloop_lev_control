@@ -11,7 +11,7 @@
       <geometry> <box size="0.6096 0.0862 0.01905"/> </geometry>
     </collision>
     
-    <!-- Bolts -->
+    Bolts
     <collision>
       <origin rpy="0 0 0" xyz="0.285 0.03 0.09585"/>
       <geometry><box size="0.01 0.01 0.01"/></geometry>
@@ -28,6 +28,24 @@
       <origin rpy="0 0 0" xyz="-0.285 -0.03 0.09585"/>
       <geometry><box size="0.01 0.01 0.01"/></geometry>
     </collision>
+
+    <!-- BottomStops
+    <collision>
+      <origin rpy="0 0 0" xyz="0.285 0.03 0.14500"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.285 -0.03 0.14500"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.285 0.03 0.14500"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.285 -0.03 0.14500"/>
+      <geometry><box size="0.01 0.01 0.01"/></geometry>
+    </collision> -->
 
     <!-- Yoke Tops -->
     <collision>
