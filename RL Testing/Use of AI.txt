@@ -119,3 +119,1659 @@
                         else:  # Front/back sensors (Y ≈ 0)
                             label = "Front" if local_pos[0] > 0 else "Back"
                         self.sensor_labels.append(label)
+
+[3]. Tool: Claude Code
+      Prompt: Given the maglev_predictor file, generate code to find the equilibrium height for a pod of a given mass.
+              This should simply be the gap height at which 0 current in either coil and zero roll (all times 2) creates a
+              force equivalent to the gravitational force on the 5.8kg pod.
+
+      Output:
+        """
+        Find equilibrium gap height for magnetic levitation system.
+
+        Given:
+        - Pod mass: 5.8 kg
+        - Required force: 5.8 * 9.81 = 56.898 N
+        - All currents: 0 A
+        - Roll angle: 0 degrees
+
+        Find: Gap height (mm) that produces this force
+        """
+
+        import numpy as np
+        from maglev_predictor import MaglevPredictor
+
+        # Initialize predictor
+        predictor = MaglevPredictor()
+
+        # Target force
+        target_force = 5.8 * 9.81  # 56.898 N
+
+        print("=" * 70)
+        print("EQUILIBRIUM GAP HEIGHT FINDER")
+        print("=" * 70)
+        print(f"Target Force: {target_force:.3f} N (for 5.8 kg pod)")
+        print(f"Parameters: currL = 0 A, currR = 0 A, roll = 0°")
+        print()
+
+        # Define objective function
+        def force_error(gap_height):
+            """Calculate difference between predicted force and target force."""
+            force, _ = predictor.predict(currL=0, currR=0, roll=0, gap_height=gap_height)
+            return force - target_force
+
+        # First, let's scan across gap heights to understand the behavior
+        print("Scanning gap heights from 5 to 30 mm...")
+        print("-" * 70)
+        gap_range = np.linspace(5, 30, 26)
+        forces = []
+
+        for gap in gap_range:
+            force, torque = predictor.predict(currL=0, currR=0, roll=0, gap_height=gap)
+            forces.append(force)
+            if abs(force - target_force) < 5:  # Close to target
+                print(f"Gap: {gap:5.1f} mm  →  Force: {force:7.3f} N  ←  CLOSE!")
+            else:
+                print(f"Gap: {gap:5.1f} mm  →  Force: {force:7.3f} N")
+
+        forces = np.array(forces)
+
+        print()
+        print("-" * 70)
+
+        # Check if target force is within the range
+        min_force = forces.min()
+        max_force = forces.max()
+
+        if target_force < min_force or target_force > max_force:
+            print(f"⚠ WARNING: Target force {target_force:.3f} N is outside the range!")
+            print(f"  Force range: {min_force:.3f} N to {max_force:.3f} N")
+            print(f"  Cannot achieve equilibrium with 0A currents.")
+        else:
+            # Find the gap height using root finding
+            # Use brentq for robust bracketing (requires sign change)
+            
+            # Find bracketing interval
+            idx_above = np.where(forces > target_force)[0]
+            idx_below = np.where(forces < target_force)[0]
+            
+            if len(idx_above) > 0 and len(idx_below) > 0:
+                # Find the transition point
+                gap_low = gap_range[idx_below[-1]]
+                gap_high = gap_range[idx_above[0]]
+                
+                print(f"✓ Target force is achievable!")
+                print(f"  Bracketing interval: {gap_low:.1f} mm to {gap_high:.1f} mm")
+                print()
+                
+                # Use simple bisection method for accurate root finding
+                tol = 1e-6
+                while (gap_high - gap_low) > tol:
+                    gap_mid = (gap_low + gap_high) / 2
+                    force_mid, _ = predictor.predict(currL=0, currR=0, roll=0, gap_height=gap_mid)
+                    
+                    if force_mid > target_force:
+                        gap_low = gap_mid
+                    else:
+                        gap_high = gap_mid
+                
+                equilibrium_gap = (gap_low + gap_high) / 2
+                
+                # Verify the result
+                final_force, final_torque = predictor.predict(
+                    currL=0, currR=0, roll=0, gap_height=equilibrium_gap
+                )
+                
+                print("=" * 70)
+                print("EQUILIBRIUM FOUND!")
+                print("=" * 70)
+                print(f"Equilibrium Gap Height: {equilibrium_gap:.6f} mm")
+                print(f"Predicted Force:        {final_force:.6f} N")
+                print(f"Target Force:           {target_force:.6f} N")
+                print(f"Error:                  {abs(final_force - target_force):.9f} N")
+                print(f"Torque at equilibrium:  {final_torque:.6f} mN·m")
+                print()
+                print(f"✓ Pod will levitate at {equilibrium_gap:.3f} mm gap height")
+                print(f"  with no current applied (permanent magnets only)")
+                print("=" * 70)
+            else:
+                print("⚠ Could not find bracketing interval for bisection.")
+                print("  Target force may not be achievable in the scanned range.")
+
+[4]. Tool: Claude Code
+      Prompt:
+        How can I fit a polynomial to a system with 4 inputs and two outputs? I need to map the values
+        in the provided CSV file (currL, currR, roll, and inverse Gap) to Force and Torque readings.
+
+      Output: 
+        # 1. Load your Ansys CSV - using invGap for modeling
+        X = magDf[['currL [A]', 'currR [A]', 'rollDeg [deg]', 'invGap']]
+        y = magDf[['YokeForce.Force_z [newton]', 'YokeTorque.Torque [mNewtonMeter]']]
+
+        # 2. Create Features (e.g. z^2, z^3, z*IL, etc.)
+        poly = PolynomialFeatures(degree=3) 
+        X_poly = poly.fit_transform(X)
+
+        # 3. Fit
+        model = LinearRegression()
+        model.fit(X_poly, y)
+
+        # 4. Extract Equation
+        print("Force Coeffs:", model.coef_[0])
+        print("Torque Coeffs:", model.coef_[1])
+
+[5]. Tool: Claude Code
+      Prompt:
+        Can you generate code for comparing a polynomial fit on the entire dataset (the actual 
+        polynomial curve, not just the points that are provided by Ansys) with the ansys points
+        themselves for a single segment with the currents and roll degree held constant and the
+        Gap Height on X-axis and force on y-axis? Use the given code for reference.
+      
+      Output:
+        # Train best degree polynomial on full dataset
+        poly_best = PolynomialFeatures(degree=best_degree)
+        X_poly_best = poly_best.fit_transform(X)
+        model_best = LinearRegression()
+        model_best.fit(X_poly_best, y)
+
+        print(f"Using polynomial degree: {best_degree}")
+
+        # Select a specific operating condition to visualize
+        # Using the same condition as earlier: -15A, -15A, 0° roll
+        test_condition = magDf.iloc[0:13].copy()
+        currL_val = test_condition['currL [A]'].iloc[0]
+        currR_val = test_condition['currR [A]'].iloc[0]
+        roll_val = test_condition['rollDeg [deg]'].iloc[0]
+
+        # Create very fine grid for gap heights to see polynomial behavior between points
+        gap_very_fine = np.linspace(5, 30, 500)  # 500 points for smooth curve
+        X_fine = pd.DataFrame({
+            'currL [A]': [currL_val] * 500,
+            'currR [A]': [currR_val] * 500,
+            'rollDeg [deg]': [roll_val] * 500,
+            'invGap': 1/gap_very_fine  # Use inverse gap height for modeling
+        })
+        X_fine_poly = poly_best.transform(X_fine)
+        y_fine_pred = model_best.predict(X_fine_poly)
+
+        # Extract actual Ansys data for this condition
+        gap_actual = test_condition['GapHeight [mm]'].values
+        force_actual = test_condition['YokeForce.Force_z [newton]'].values
+
+        # Plot
+        fig, ax = plt.subplots(1, 1, figsize=(12, 7))
+
+        ax.plot(gap_very_fine, y_fine_pred[:, 0], '-', linewidth=2.5, 
+                label=f'Degree {best_degree} Polynomial Function', color='#2ca02c', alpha=0.8)
+
+        # Plot actual Ansys data points
+        ax.scatter(gap_actual, force_actual, s=120, marker='o', 
+                  color='#d62728', edgecolors='black', linewidths=1.5,
+                  label='Ansys Simulation Data', zorder=5)
+
+        ax.set_ylabel('Force (N)', fontsize=13)
+        ax.set_title(f'Degree {best_degree} Polynomial vs Ansys Data (currL={currL_val}A, currR={currR_val}A, roll={roll_val}°)', 
+                    fontsize=14, fontweight='bold')
+        ax.legend(fontsize=12, loc='best')
+        ax.grid(True, alpha=0.3)
+
+        # Add vertical lines at data points to highlight gaps
+        for gap_point in gap_actual:
+            ax.axvline(gap_point, color='gray', linestyle=':', alpha=0.3, linewidth=0.8)
+
+        plt.tight_layout()
+        plt.show()
+
+        # Check for excessive oscillations by looking at derivative
+        print("Checking for overfitting indicators:")
+        print(f"Number of actual data points in this condition: {len(gap_actual)}")
+
+        print(f"Gap spacing: {np.diff(gap_actual).mean():.2f} mm average")
+        print(f"Polynomial curve resolution: 500 points over {gap_very_fine.max() - gap_very_fine.min():.1f} mm range")
+
+[6]. Tool: Claude Code
+      Prompt:
+        Now can we do four different trials with similar graphs but different combinations of the starting conditions?
+      Output:
+        # Select 4 different conditions to visualize
+        # Each condition has 13 gap height measurements (one complete parameter set)
+        condition_indices = [
+            (0, 13, '-15A, -15A, 0°'),      # First condition
+            (13, 26, '-15A, -15A, 0.5°'),   # Same currents, different roll
+            (91, 104, '-15A, -10A, 0°'),    # Different right current
+            (182, 195, '-15A, -10A, 1°')    # Different right current and roll
+        ]
+
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        axes = axes.flatten()
+
+        for idx, (start, end, label) in enumerate(condition_indices):
+            ax = axes[idx]
+            
+            # Get condition data
+            condition_data = magDf.iloc[start:end]
+            currL = condition_data['currL [A]'].iloc[0]
+            currR = condition_data['currR [A]'].iloc[0]
+            roll = condition_data['rollDeg [deg]'].iloc[0]
+            
+            # Create fine grid
+            gap_fine = np.linspace(5, 30, 500)
+            X_condition_fine = pd.DataFrame({
+                'currL [A]': [currL] * 500,
+                'currR [A]': [currR] * 500,
+                'rollDeg [deg]': [roll] * 500,
+                'invGap': 1/gap_fine  # Use inverse gap height for modeling
+            })
+            
+            # Predict with best degree polynomial
+            X_condition_poly = poly_best.transform(X_condition_fine)
+            y_condition_pred = model_best.predict(X_condition_poly)
+            
+            # Plot polynomial curve
+            ax.plot(gap_fine, y_condition_pred[:, 0], '-', linewidth=2.5, 
+                    color='#2ca02c', alpha=0.8, label=f'Degree {best_degree} Polynomial')
+            
+            # Plot actual data
+            ax.scatter(condition_data['GapHeight [mm]'], 
+                      condition_data['YokeForce.Force_z [newton]'],
+                      s=100, marker='o', color='#d62728', 
+                      edgecolors='black', linewidths=1.5,
+                      label='Ansys Data', zorder=5)
+            
+            # Formatting
+            ax.set_xlabel('Gap Height (mm)', fontsize=11)
+            ax.set_ylabel('Force (N)', fontsize=11)
+            ax.set_title(f'currL={currL:.0f}A, currR={currR:.0f}A, roll={roll:.0f}°', 
+                        fontsize=12, fontweight='bold')
+            ax.legend(fontsize=10, loc='best')
+            ax.grid(True, alpha=0.3)
+            
+            # Add vertical lines at data points
+            for gap_point in condition_data['GapHeight [mm]'].values:
+                ax.axvline(gap_point, color='gray', linestyle=':', alpha=0.2, linewidth=0.8)
+
+        plt.suptitle(f'Degree {best_degree} Polynomial: Multiple Operating Conditions', 
+                    fontsize=15, fontweight='bold', y=1.00)
+        plt.tight_layout()
+        plt.show()
+
+        print("Visual inspection guide:")
+        print("✓ Look for smooth curves between data points (good)")
+        print("✗ Look for wild oscillations or wiggles between points (overfitting)")
+        print("✓ Polynomial should interpolate naturally without excessive curvature")
+
+[7]. Tool: Claude Code
+      Prompt:
+        Let's now find the worst performing segment of 13 gap heights to show the worst possible
+        performance of our polynomial fit in terms of the R^2 score
+
+      Output:
+        # Calculate R² score for each 13-row segment (each parameter set)
+        num_segments = len(magDf) // 13
+        segment_scores = []
+        segment_info = []
+
+        for i in range(num_segments):
+            start_idx = i * 13
+            end_idx = start_idx + 13
+            
+            # Get actual and predicted values for this segment
+            segment_actual = y.iloc[start_idx:end_idx, 0].values  # Force only
+            segment_pred = model_best.predict(poly_best.transform(X.iloc[start_idx:end_idx]))[:, 0]
+            
+            # Calculate R² for this segment
+            segment_r2 = r2_score(segment_actual, segment_pred)
+            segment_scores.append(segment_r2)
+            
+            # Store segment info
+            segment_data = magDf.iloc[start_idx:end_idx]
+            currL = segment_data['currL [A]'].iloc[0]
+            currR = segment_data['currR [A]'].iloc[0]
+            roll = segment_data['rollDeg [deg]'].iloc[0]
+            segment_info.append({
+                'start': start_idx,
+                'end': end_idx,
+                'currL': currL,
+                'currR': currR,
+                'roll': roll,
+                'r2': segment_r2
+            })
+
+        # Find worst performing segment
+        worst_idx = np.argmin(segment_scores)
+        worst_segment = segment_info[worst_idx]
+
+        print(f"Total segments analyzed: {num_segments}")
+        print(f"\nWorst performing segment:")
+        print(f"  Rows: {worst_segment['start']} to {worst_segment['end']}")
+        print(f"  Parameters: currL={worst_segment['currL']:.0f}A, currR={worst_segment['currR']:.0f}A, roll={worst_segment['roll']:.1f}°")
+        print(f"  R² Score: {worst_segment['r2']:.6f}")
+        print(f"\nBest performing segment R²: {max(segment_scores):.6f}")
+        print(f"Mean R² across all segments: {np.mean(segment_scores):.6f}")
+        print(f"Median R² across all segments: {np.median(segment_scores):.6f}")
+
+[8]. Tool: Claude Code
+      Prompt:
+        Let's also visualize the worst segment so the evidently good performance is visible to a viewer.
+
+      Output:
+        # Get worst segment data
+        worst_data = magDf.iloc[worst_segment['start']:worst_segment['end']]
+        worst_currL = worst_segment['currL']
+        worst_currR = worst_segment['currR']
+        worst_roll = worst_segment['roll']
+        worst_r2 = worst_segment['r2']
+
+        # Create fine grid for this worst segment
+        gap_fine_worst = np.linspace(5, 30, 500)
+        X_worst_fine = pd.DataFrame({
+            'currL [A]': [worst_currL] * 500,
+            'currR [A]': [worst_currR] * 500,
+            'rollDeg [deg]': [worst_roll] * 500,
+            'invGap': 1/gap_fine_worst
+        })
+
+        # Get predictions
+        X_worst_poly = poly_best.transform(X_worst_fine)
+        y_worst_pred = model_best.predict(X_worst_poly)
+
+        # Extract actual data
+        gap_worst_actual = worst_data['GapHeight [mm]'].values
+        force_worst_actual = worst_data['YokeForce.Force_z [newton]'].values
+
+        # Create the plot
+        fig, ax = plt.subplots(1, 1, figsize=(12, 7))
+
+        # Plot polynomial curve
+        ax.plot(gap_fine_worst, y_worst_pred[:, 0], '-', linewidth=2.5, 
+                label=f'Degree {best_degree} Polynomial', color='#2ca02c', alpha=0.8)
+
+        # Plot actual data points
+        ax.scatter(gap_worst_actual, force_worst_actual, s=120, marker='o', 
+                  color='#d62728', edgecolors='black', linewidths=1.5,
+                  label='Ansys Data', zorder=5)
+
+        # Formatting
+        ax.set_xlabel('Gap Height (mm)', fontsize=13)
+        ax.set_ylabel('Force (N)', fontsize=13)
+        ax.set_title(f'Worst Case Performance (R² = {worst_r2:.6f}) - currL={worst_currL:.0f}A, currR={worst_currR:.0f}A, roll={worst_roll:.1f}°', 
+                    fontsize=14, fontweight='bold')
+        ax.legend(fontsize=12, loc='best')
+        ax.grid(True, alpha=0.3)
+
+        # Add vertical lines at data points
+        for gap_point in gap_worst_actual:
+            ax.axvline(gap_point, color='gray', linestyle=':', alpha=0.3, linewidth=0.8)
+
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Even in the worst case, the model achieves R² = {worst_r2:.6f}")
+        print(f"This demonstrates excellent interpolation performance across all operating conditions!")
+
+[9]. Tool: Claude Code
+      Prompt:
+        Now let's do something similar for the torque, showing how our polynomial fits to the torque vs
+        roll trend in ansys data while keeping othe variables constant. Show 4 trials like before, and 
+        generate a continuous plot, like before.
+
+      Output:
+        # Select 4 different gap heights to visualize
+        # Using currL = -15A, currR = -15A configuration
+        gap_heights_to_plot = [8, 10, 15, 21]  # mm
+
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        axes = axes.flatten()
+
+        for idx, gap_height in enumerate(gap_heights_to_plot):
+            ax = axes[idx]
+            
+            # Fixed current configuration
+            currL = -15
+            currR = -15
+            
+            # Get actual data for this gap height
+            gap_data = magDf[(magDf['GapHeight [mm]'] == gap_height) & 
+                              (magDf['currL [A]'] == currL) & 
+                              (magDf['currR [A]'] == currR)]
+            
+            # Create fine grid for smooth curve across roll angles
+            roll_fine = np.linspace(-5, 5.0, 500)
+            X_condition_fine = pd.DataFrame({
+                'currL [A]': [currL] * 500,
+                'currR [A]': [currR] * 500,
+                'rollDeg [deg]': roll_fine,
+                'invGap': [1/gap_height] * 500
+            })
+            
+            # Predict with best degree polynomial
+            X_condition_poly = poly_best.transform(X_condition_fine)
+            y_condition_pred = model_best.predict(X_condition_poly)
+            
+            # Plot polynomial curve for TORQUE (index 1)
+            ax.plot(roll_fine, y_condition_pred[:, 1], '-', linewidth=2.5, 
+                    color='#ff7f0e', alpha=0.8, label=f'Degree {best_degree} Polynomial')
+            
+            # Plot actual torque data
+            ax.scatter(gap_data['rollDeg [deg]'], 
+                      gap_data['YokeTorque.Torque [mNewtonMeter]'],
+                      s=100, marker='o', color='#9467bd', 
+                      edgecolors='black', linewidths=1.5,
+                      label='Ansys Data', zorder=5)
+            
+            # Formatting
+            ax.set_xlabel('Roll Angle (deg)', fontsize=11)
+            ax.set_ylabel('Torque (mN·m)', fontsize=11)
+            ax.set_title(f'Gap Height = {gap_height} mm (currL={currL:.0f}A, currR={currR:.0f}A)', 
+                        fontsize=12, fontweight='bold')
+            ax.legend(fontsize=10, loc='best')
+            ax.grid(True, alpha=0.3)
+            
+            # Add vertical lines at actual roll angle data points
+            for roll_point in gap_data['rollDeg [deg]'].unique():
+                ax.axvline(roll_point, color='gray', linestyle=':', alpha=0.2, linewidth=0.8)
+
+        plt.suptitle(f'Torque vs Roll Angle at Different Gap Heights (Degree {best_degree} Polynomial)', 
+                    fontsize=15, fontweight='bold', y=1.00)
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Showing torque variation with roll angle at {len(gap_heights_to_plot)} different gap heights.")
+        print("Gap height affects the magnitude of torque but the relationship with roll angle remains consistent.")
+
+[10]. Tool: Claude Code
+      Prompt:
+        Since torque also varies with current imbalance between the coils, let's visualize the
+        response for that as well. Follow the same visualization pattern as before.
+
+      Output:
+        # Select 4 different gap heights to visualize
+        # Using roll = 0.5 degrees (small but non-zero torque)
+        gap_heights_to_plot = [8, 10, 15, 21]  # mm
+        roll_target = 0.5
+
+        # Use a fixed reference current for currL
+        currL_ref = -15
+
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        axes = axes.flatten()
+
+        for idx, gap_height in enumerate(gap_heights_to_plot):
+            ax = axes[idx]
+            
+            # Get actual data for this gap height, roll angle, AND fixed currL
+            gap_roll_data = magDf[(magDf['GapHeight [mm]'] == gap_height) & 
+                                  (magDf['rollDeg [deg]'] == roll_target) &
+                                  (magDf['currL [A]'] == currL_ref)]
+            
+            # Calculate imbalance for actual data points (all have same currL now)
+            actual_imbalances = []
+            actual_torques = []
+            for _, row in gap_roll_data.iterrows():
+                imbalance = row['currR [A]'] - row['currL [A]']
+                torque = row['YokeTorque.Torque [mNewtonMeter]']
+                actual_imbalances.append(imbalance)
+                actual_torques.append(torque)
+            
+            # Create fine grid for smooth curve across current imbalances
+            # Range from -10A to +10A imbalance (currR - currL)
+            imbalance_fine = np.linspace(0, 35, 500)
+            
+            # Vary currR while keeping currL fixed
+            currR_fine = currL_ref + imbalance_fine
+            
+            X_condition_fine = pd.DataFrame({
+                'currL [A]': [currL_ref] * 500,
+                'currR [A]': currR_fine,
+                'rollDeg [deg]': [roll_target] * 500,
+                'invGap': [1/gap_height] * 500
+            })
+            
+            # Predict with best degree polynomial
+            X_condition_poly = poly_best.transform(X_condition_fine)
+            y_condition_pred = model_best.predict(X_condition_poly)
+            
+            # Plot polynomial curve for TORQUE (index 1)
+            ax.plot(imbalance_fine, y_condition_pred[:, 1], '-', linewidth=2.5, 
+                    color='#ff7f0e', alpha=0.8, label=f'Degree {best_degree} Polynomial')
+            
+            # Plot actual torque data (now only one point per imbalance value)
+            ax.scatter(actual_imbalances, actual_torques,
+                      s=100, marker='o', color='#9467bd', 
+                      edgecolors='black', linewidths=1.5,
+                      label='Ansys Data', zorder=5)
+            
+            # Formatting
+            ax.set_xlabel('Current Imbalance (currR - currL) [A]', fontsize=11)
+            ax.set_ylabel('Torque (mN·m)', fontsize=11)
+            ax.set_title(f'Gap Height = {gap_height} mm (currL = {currL_ref}A, roll = {roll_target}°)', 
+                        fontsize=12, fontweight='bold')
+            ax.legend(fontsize=10, loc='best')
+            ax.grid(True, alpha=0.3)
+            ax.axhline(0, color='black', linestyle='-', linewidth=0.5, alpha=0.3)
+            ax.axvline(0, color='black', linestyle='-', linewidth=0.5, alpha=0.3)
+            
+            # Add vertical lines at actual imbalance data points
+            for imb in set(actual_imbalances):
+                ax.axvline(imb, color='gray', linestyle=':', alpha=0.2, linewidth=0.8)
+
+        plt.suptitle(f'Torque vs Current Imbalance at Different Gap Heights (currL = {currL_ref}A, Roll = {roll_target}°)', 
+                    fontsize=15, fontweight='bold', y=1.00)
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Showing torque variation with current imbalance at {len(gap_heights_to_plot)} different gap heights.")
+        print(f"All data uses currL = {currL_ref}A with varying currR to create different imbalances.")
+        print(f"Current imbalance (currR - currL) affects torque magnitude and direction.")
+        print(f"Positive imbalance (currR > currL) and negative imbalance (currR < currL) produce opposite torques.")
+
+[11]. Tool: Claude Code
+      Prompt:
+        Let's now visualize the worst torque prediction for a given 13-gap-height segment.
+        What is our worst possible performance? Show in a similar way as with force.
+
+      Output:
+        # Calculate R² score for torque in each 13-row segment
+        torque_segment_scores = []
+        torque_segment_info = []
+
+        for i in range(num_segments):
+            start_idx = i * 13
+            end_idx = start_idx + 13
+            
+            # Get actual and predicted torque values for this segment
+            segment_actual_torque = y.iloc[start_idx:end_idx, 1].values  # Torque column
+            segment_pred_torque = model_best.predict(poly_best.transform(X.iloc[start_idx:end_idx]))[:, 1]
+            
+            # Calculate R² for this segment
+            segment_r2_torque = r2_score(segment_actual_torque, segment_pred_torque)
+            torque_segment_scores.append(segment_r2_torque)
+            
+            # Store segment info
+            segment_data = magDf.iloc[start_idx:end_idx]
+            currL = segment_data['currL [A]'].iloc[0]
+            currR = segment_data['currR [A]'].iloc[0]
+            roll = segment_data['rollDeg [deg]'].iloc[0]
+            torque_segment_info.append({
+                'start': start_idx,
+                'end': end_idx,
+                'currL': currL,
+                'currR': currR,
+                'roll': roll,
+                'r2': segment_r2_torque
+            })
+
+        # Find worst and best performing segments for torque
+        worst_torque_idx = np.argmin(torque_segment_scores)
+        best_torque_idx = np.argmax(torque_segment_scores)
+        worst_torque_segment = torque_segment_info[worst_torque_idx]
+        best_torque_segment = torque_segment_info[best_torque_idx]
+
+        print(f"Torque Prediction Analysis (across {num_segments} segments):")
+        print(f"\nBest R² Score: {max(torque_segment_scores):.6f}")
+        print(f"  Parameters: currL={best_torque_segment['currL']:.0f}A, currR={best_torque_segment['currR']:.0f}A, roll={best_torque_segment['roll']:.1f}°")
+        print(f"\nWorst R² Score: {min(torque_segment_scores):.6f}")
+        print(f"  Parameters: currL={worst_torque_segment['currL']:.0f}A, currR={worst_torque_segment['currR']:.0f}A, roll={worst_torque_segment['roll']:.1f}°")
+        print(f"\nMean R²: {np.mean(torque_segment_scores):.6f}")
+        print(f"Median R²: {np.median(torque_segment_scores):.6f}")
+        print(f"Std Dev: {np.std(torque_segment_scores):.6f}")
+
+        # Create histogram of torque R² scores
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        ax.hist(torque_segment_scores, bins=30, edgecolor='black', alpha=0.7, color='#9467bd')
+        ax.axvline(np.mean(torque_segment_scores), color='red', linestyle='--', linewidth=2, label=f'Mean = {np.mean(torque_segment_scores):.6f}')
+        ax.axvline(np.median(torque_segment_scores), color='orange', linestyle='--', linewidth=2, label=f'Median = {np.median(torque_segment_scores):.6f}')
+        ax.set_xlabel('R² Score', fontsize=12)
+        ax.set_ylabel('Number of Segments', fontsize=12)
+        ax.set_title('Distribution of Torque R² Scores Across All Parameter Segments', fontsize=14, fontweight='bold')
+        ax.legend(fontsize=11)
+        ax.grid(True, alpha=0.3, axis='y')
+        plt.tight_layout()
+        plt.show()
+
+        # Get worst torque segment data
+        worst_torque_data = magDf.iloc[worst_torque_segment['start']:worst_torque_segment['end']]
+        worst_torque_currL = worst_torque_segment['currL']
+        worst_torque_currR = worst_torque_segment['currR']
+        worst_torque_roll = worst_torque_segment['roll']
+        worst_torque_r2 = worst_torque_segment['r2']
+
+        # Create fine grid for this worst segment
+        gap_fine_worst_torque = np.linspace(2, 30, 500)
+        X_worst_torque_fine = pd.DataFrame({
+            'currL [A]': [worst_torque_currL] * 500,
+            'currR [A]': [worst_torque_currR] * 500,
+            'rollDeg [deg]': [worst_torque_roll] * 500,
+            'invGap': 1/gap_fine_worst_torque
+        })
+
+        # Get predictions
+        X_worst_torque_poly = poly_best.transform(X_worst_torque_fine)
+        y_worst_torque_pred = model_best.predict(X_worst_torque_poly)
+
+        # Extract actual data
+        gap_worst_torque_actual = worst_torque_data['GapHeight [mm]'].values
+        torque_worst_actual = worst_torque_data['YokeTorque.Torque [mNewtonMeter]'].values
+
+        # Create the plot
+        fig, ax = plt.subplots(1, 1, figsize=(12, 7))
+
+        # Plot polynomial curve for TORQUE
+        ax.plot(gap_fine_worst_torque, y_worst_torque_pred[:, 1], '-', linewidth=2.5, 
+                label=f'Degree {best_degree} Polynomial', color='#ff7f0e', alpha=0.8)
+
+        # Plot actual data points
+        ax.scatter(gap_worst_torque_actual, torque_worst_actual, s=120, marker='o', 
+                  color='#9467bd', edgecolors='black', linewidths=1.5,
+                  label='Ansys Data', zorder=5)
+
+        # Formatting
+        ax.set_xlabel('Gap Height (mm)', fontsize=13)
+        ax.set_ylabel('Torque (mN·m)', fontsize=13)
+        ax.set_title(f'Worst Torque Case (R² = {worst_torque_r2:.6f}) - currL={worst_torque_currL:.0f}A, currR={worst_torque_currR:.0f}A, roll={worst_torque_roll:.1f}°', 
+                    fontsize=14, fontweight='bold')
+        ax.legend(fontsize=12, loc='best')
+        ax.grid(True, alpha=0.3)
+
+        # Add vertical lines at data points
+        for gap_point in gap_worst_torque_actual:
+            ax.axvline(gap_point, color='gray', linestyle=':', alpha=0.3, linewidth=0.8)
+
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Worst-case torque prediction achieves R² = {worst_torque_r2:.6f}")
+
+[12]. Tool: Claude Code
+      Prompt:
+        Can we now export this model for use in a simulator? I want this to be accessible but also quite
+        fast since the simulator will be running at 240Hz and calculating forces and torques for 2 yokes at once.
+
+      Output:
+        print("=" * 60)
+        print("MODEL EXPORT SUMMARY")
+        print("=" * 60)
+        print(f"\nModel Type: Polynomial Regression")
+        print(f"Polynomial Degree: {best_degree}")
+        print(f"Number of Features: {poly_best.n_features_in_}")
+        print(f"Number of Polynomial Terms: {poly_best.n_output_features_}")
+        print(f"\nInput Features:")
+        print("  - currL [A]")
+        print("  - currR [A]")
+        print("  - rollDeg [deg]")
+        print("  - invGap (1/GapHeight)")
+        print(f"\nOutputs:")
+        print("  - YokeForce.Force_z [newton]")
+        print("  - YokeTorque.Torque [mNewtonMeter]")
+        print(f"\nModel Performance:")
+        print(f"  Force R² Score: {r2_score(y.iloc[:, 0].values, y_pred_full[:, 0]):.6f}")
+        print(f"  Torque R² Score: {torque_r2_overall:.6f}")
+        print(f"\nModel Coefficients Shape:")
+        print(f"  Force coefficients: {model_best.coef_[0].shape}")
+        print(f"  Torque coefficients: {model_best.coef_[1].shape}")
+        print("=" * 60)
+
+        # Generate standalone predictor class
+        predictor_code = f'''"""
+        Magnetic Levitation Force and Torque Predictor
+        Generated from polynomial regression model (degree {best_degree})
+
+        Performance:
+          - Force R²: {r2_score(y.iloc[:, 0].values, y_pred_full[:, 0]):.6f}
+          - Torque R²: {torque_r2_overall:.6f}
+
+        Usage:
+            predictor = MaglevPredictor()
+            force, torque = predictor.predict(currL=-15, currR=-15, roll=1.0, gap_height=10.0)
+        """
+
+        import numpy as np
+        from itertools import combinations_with_replacement
+
+        class MaglevPredictor:
+            def __init__(self):
+                """Initialize the magnetic levitation force/torque predictor."""
+                self.degree = {best_degree}
+                self.n_features = 4  # currL, currR, roll, invGap
+                
+                # Force model coefficients
+                self.force_intercept = {model_best.intercept_[0]}
+                self.force_coef = np.array({model_best.coef_[0].tolist()})
+                
+                # Torque model coefficients  
+                self.torque_intercept = {model_best.intercept_[1]}
+                self.torque_coef = np.array({model_best.coef_[1].tolist()})
+                
+            def _polynomial_features(self, X):
+                """
+                Generate polynomial features up to specified degree.
+                Mimics sklearn's PolynomialFeatures with include_bias=True.
+                
+                Args:
+                    X: numpy array of shape (n_samples, 4) with [currL, currR, roll, invGap]
+                    
+                Returns:
+                    Polynomial features array
+                """
+                n_samples = X.shape[0]
+                
+                # Start with bias term (column of ones)
+                features = [np.ones(n_samples)]
+                
+                # Add original features
+                for i in range(self.n_features):
+                    features.append(X[:, i])
+                
+                # Add polynomial combinations
+                for deg in range(2, self.degree + 1):
+                    for combo in combinations_with_replacement(range(self.n_features), deg):
+                        term = np.ones(n_samples)
+                        for idx in combo:
+                            term *= X[:, idx]
+                        features.append(term)
+                
+                return np.column_stack(features)
+            
+            def predict(self, currL, currR, roll, gap_height):
+                """
+                Predict force and torque for given operating conditions.
+                
+                Args:
+                    currL: Left coil current in Amps
+                    currR: Right coil current in Amps
+                    roll: Roll angle in degrees
+                    gap_height: Gap height in mm
+                    
+                Returns:
+                    tuple: (force [N], torque [mN·m])
+                """
+                # Compute inverse gap (critical transformation!)
+                invGap = 1.0 / gap_height
+                
+                # Create input array
+                X = np.array([[currL, currR, roll, invGap]])
+                
+                # Generate polynomial features
+                X_poly = self._polynomial_features(X)
+                
+                # Compute predictions
+                force = self.force_intercept + np.dot(X_poly, self.force_coef)[0]
+                torque = self.torque_intercept + np.dot(X_poly, self.torque_coef)[0]
+                
+                return force, torque
+            
+            def predict_batch(self, currL_array, currR_array, roll_array, gap_height_array):
+                """
+                Predict force and torque for multiple operating conditions.
+                
+                Args:
+                    currL_array: Array of left coil currents [A]
+                    currR_array: Array of right coil currents [A]
+                    roll_array: Array of roll angles [deg]
+                    gap_height_array: Array of gap heights [mm]
+                    
+                Returns:
+                    tuple: (force_array [N], torque_array [mN·m])
+                """
+                # Convert to numpy arrays
+                currL_array = np.asarray(currL_array)
+                currR_array = np.asarray(currR_array)
+                roll_array = np.asarray(roll_array)
+                gap_height_array = np.asarray(gap_height_array)
+                
+                # Compute inverse gaps
+                invGap_array = 1.0 / gap_height_array
+                
+                # Stack into feature matrix
+                X = np.column_stack([currL_array, currR_array, roll_array, invGap_array])
+                
+                # Generate polynomial features
+                X_poly = self._polynomial_features(X)
+                
+                # Compute predictions
+                force_array = self.force_intercept + np.dot(X_poly, self.force_coef)
+                torque_array = self.torque_intercept + np.dot(X_poly, self.torque_coef)
+                
+                return force_array, torque_array
+
+
+        if __name__ == "__main__":
+            # Example usage
+            predictor = MaglevPredictor()
+            
+            # Single prediction
+            force, torque = predictor.predict(currL=-15, currR=-15, roll=1.0, gap_height=10.0)
+            print(f"Single prediction:")
+            print(f"  Force: {{force:.2f}} N")
+            print(f"  Torque: {{torque:.2f}} mN·m")
+            
+            # Batch prediction
+            currL = np.array([-15, -15, -10])
+            currR = np.array([-15, -10, -10])
+            roll = np.array([0, 0.5, 1.0])
+            gap = np.array([10, 12, 15])
+            
+            forces, torques = predictor.predict_batch(currL, currR, roll, gap)
+            print(f"\\nBatch prediction:")
+            for i in range(len(forces)):
+                print(f"  Condition {{i+1}}: Force={{forces[i]:.2f}} N, Torque={{torques[i]:.2f}} mN·m")
+        '''
+
+        # Save to file
+        predictor_filename = 'maglev_predictor.py'
+        with open(predictor_filename, 'w') as f:
+            f.write(predictor_code)
+
+        print(f"✓ Saved standalone predictor: {predictor_filename}")
+        print(f"\nThis module:")
+        print(f"  - Has NO scikit-learn dependency (only numpy)")
+        print(f"  - Can be imported directly into your simulator")
+        print(f"  - Includes both single and batch prediction methods")
+        print(f"  - Implements polynomial feature generation internally")
+        print(f"\nTo use:")
+        print(f"```python")
+        print(f"from maglev_predictor import MaglevPredictor")
+        print(f"predictor = MaglevPredictor()")
+        print(f"force, torque = predictor.predict(currL=-15, currR=-15, roll=1.0, gap_height=10.0)")
+        print(f"```")
+
+        # Import the standalone predictor (reload to get latest version)
+        import importlib
+        import maglev_predictor
+        importlib.reload(maglev_predictor)
+        from maglev_predictor import MaglevPredictor
+
+        # Create predictor instance
+        standalone_predictor = MaglevPredictor()
+
+        # Test cases
+        test_cases = [
+            {'currL': -15, 'currR': -15, 'roll': 0.0, 'gap': 10.0},
+            {'currL': -15, 'currR': -15, 'roll': 1.0, 'gap': 10.0},
+            {'currL': -15, 'currR': -10, 'roll': 0.5, 'gap': 12.0},
+            {'currL': -10, 'currR': -10, 'roll': 2.0, 'gap': 15.0},
+        ]
+
+        print("Validation: Comparing Standalone Predictor vs Original Model")
+        print("=" * 80)
+
+        for i, case in enumerate(test_cases):
+            # Standalone predictor
+            force_standalone, torque_standalone = standalone_predictor.predict(
+                case['currL'], case['currR'], case['roll'], case['gap']
+            )
+            
+            # Original model
+            X_test = pd.DataFrame({
+                'currL [A]': [case['currL']],
+                'currR [A]': [case['currR']],
+                'rollDeg [deg]': [case['roll']],
+                'invGap': [1/case['gap']]
+            })
+            X_test_poly = poly_best.transform(X_test)
+            y_test_pred = model_best.predict(X_test_poly)
+            force_original = y_test_pred[0, 0]
+            torque_original = y_test_pred[0, 1]
+            
+            # Compare
+            force_diff = abs(force_standalone - force_original)
+            torque_diff = abs(torque_standalone - torque_original)
+            
+            print(f"\nTest Case {i+1}: currL={case['currL']}A, currR={case['currR']}A, " + 
+                  f"roll={case['roll']}°, gap={case['gap']}mm")
+            print(f"  Force:  Standalone={force_standalone:9.4f} N | Original={force_original:9.4f} N | Diff={force_diff:.2e}")
+            print(f"  Torque: Standalone={torque_standalone:9.4f} mN·m | Original={torque_original:9.4f} mN·m | Diff={torque_diff:.2e}")
+            
+            # Verify match (should be essentially identical, accounting for floating point)
+            assert force_diff < 1e-8, f"Force mismatch in test case {i+1}"
+            assert torque_diff < 1e-8, f"Torque mismatch in test case {i+1}"
+
+        print("\n" + "=" * 80)
+        print("✓ All tests passed! Standalone predictor matches original model perfectly.")
+        print("\nThe standalone predictor is ready for integration into your simulator!")
+
+        import joblib
+        import pickle     
+
+        # Save the polynomial transformer and model
+        model_data = {
+            'poly_features': poly_best,
+            'model': model_best,
+            'degree': best_degree,
+            'feature_names': ['currL [A]', 'currR [A]', 'rollDeg [deg]', 'invGap'],
+            'performance': {
+                'force_r2': r2_score(y.iloc[:, 0].values, y_pred_full[:, 0]),
+                'torque_r2': torque_r2_overall
+            }
+        }
+
+        # Save using joblib (preferred for sklearn models)
+        joblib.dump(model_data, 'maglev_model.pkl')
+
+        print("✓ Saved sklearn model: maglev_model.pkl")
+        print(f"\nFile size: {os.path.getsize('maglev_model.pkl') / 1024:.2f} KB")
+        print(f"\nContents:")
+        print(f"  - PolynomialFeatures transformer (degree {best_degree})")
+        print(f"  - LinearRegression model")
+        print(f"  - Feature names and metadata")
+        print(f"  - Performance metrics")
+        print(f"\nTo use:")
+        print(f"```python")
+        print(f"import joblib")
+        print(f"import numpy as np")
+        print(f"import pandas as pd")
+        print(f"")
+        print(f"# Load model")
+        print(f"data = joblib.load('maglev_model.pkl')")
+        print(f"poly = data['poly_features']")
+        print(f"model = data['model']")
+        print(f"")
+        print(f"# Make prediction")
+        print(f"X = pd.DataFrame({{'currL [A]': [-15], 'currR [A]': [-15], ")
+        print(f"                   'rollDeg [deg]': [1.0], 'invGap': [1/10.0]}})")
+        print(f"X_poly = poly.transform(X)")
+        print(f"force, torque = model.predict(X_poly)[0]")
+        print(f"```")
+
+        import time
+
+        # Load the sklearn model
+        loaded_data = joblib.load('maglev_model.pkl')
+        loaded_poly = loaded_data['poly_features']
+        loaded_model = loaded_data['model']
+
+        # Create test data (1000 predictions)
+        n_tests = 1000
+        test_currL = np.random.uniform(-15, 0, n_tests)
+        test_currR = np.random.uniform(-15, 0, n_tests)
+        test_roll = np.random.uniform(-5, 5, n_tests)
+        test_gap = np.random.uniform(6, 24, n_tests)
+
+        print("Performance Comparison (1000 predictions)")
+        print("=" * 60)
+
+        # Benchmark 1: Sklearn model (loaded from pickle)
+        start = time.perf_counter()
+        X_test = pd.DataFrame({
+            'currL [A]': test_currL,
+            'currR [A]': test_currR,
+            'rollDeg [deg]': test_roll,
+            'invGap': 1/test_gap
+        })
+        X_test_poly = loaded_poly.transform(X_test)
+        sklearn_results = loaded_model.predict(X_test_poly)
+        sklearn_time = time.perf_counter() - start
+
+        print(f"Sklearn Model (pickled):  {sklearn_time*1000:.2f} ms")
+
+        # Benchmark 2: Standalone predictor
+        start = time.perf_counter()
+        standalone_results = standalone_predictor.predict_batch(test_currL, test_currR, test_roll, test_gap)
+        standalone_time = time.perf_counter() - start
+
+        print(f"Standalone Predictor:     {standalone_time*1000:.2f} ms")
+
+        # Speedup
+        speedup = standalone_time / sklearn_time
+        print(f"\nSpeedup: {speedup:.2f}x {'faster' if speedup > 1 else 'slower'} with sklearn model")
+
+        # Verify results match
+        force_diff = np.abs(sklearn_results[:, 0] - standalone_results[0]).max()
+        torque_diff = np.abs(sklearn_results[:, 1] - standalone_results[1]).max()
+
+        print(f"\nResult verification:")
+        print(f"  Max force difference:  {force_diff:.2e} N")
+        print(f"  Max torque difference: {torque_diff:.2e} mN·m")
+        print(f"  ✓ Results match!" if (force_diff < 1e-8 and torque_diff < 1e-8) else "  ✗ Results differ!")
+
+        # Per-prediction timing
+        print(f"\nPer-prediction time:")
+        print(f"  Sklearn:     {sklearn_time/n_tests*1e6:.2f} μs")
+        print(f"  Standalone:  {standalone_time/n_tests*1e6:.2f} μs")
+
+        print(f"\n{'='*60}")
+        print(f"Recommendation:")
+        if speedup > 1.2:
+            print(f"  Use sklearn model (maglev_model.pkl) - {speedup:.1f}x faster!")
+        elif speedup < 0.8:
+            print(f"  Use standalone predictor - {1/speedup:.1f}x faster!")
+        else:
+            print(f"  Performance is similar - choose based on dependencies:")
+            print(f"    • Sklearn model: Faster, requires sklearn+joblib")
+            print(f"    • Standalone: No sklearn dependency, portable")
+
+[13]. Tool: Claude Code
+      Prompt:
+        Now can we use our model to find the equilibrium gab height? ie the gap height at which, 
+        with currents and roll at 0, our force from a single yoke * 2 = the weight of the pod in newtons?
+
+      Output:
+        # Find equilibrium gap height for 5.8 kg pod using polynomial root finding
+        import numpy as np
+        from maglev_predictor import MaglevPredictor
+        from scipy.optimize import fsolve
+
+        # Initialize predictor
+        predictor = MaglevPredictor()
+
+        # Target force for 5.8 kg pod (total force = weight)
+        # Since we have TWO yokes (front and back), each produces this force
+        target_force_per_yoke = 5.8 * 9.81 / 2  # 28.449 N per yoke
+
+        print("=" * 70)
+        print("EQUILIBRIUM GAP HEIGHT FINDER (Analytical Solution)")
+        print("=" * 70)
+        print(f"Pod mass: 5.8 kg")
+        print(f"Total weight: {5.8 * 9.81:.3f} N")
+        print(f"Target force per yoke: {target_force_per_yoke:.3f} N")
+        print(f"Parameters: currL = 0 A, currR = 0 A, roll = 0°")
+        print()
+
+        # Method 2: Use scipy.optimize.fsolve for verification
+        def force_error(gap_height):
+            # Handle array input from fsolve (convert to scalar)
+            gap_height = float(np.atleast_1d(gap_height)[0])
+            force, _ = predictor.predict(currL=0, currR=0, roll=0, gap_height=gap_height)
+            return force - target_force_per_yoke
+
+        # Try multiple initial guesses to find all solutions
+        initial_guesses = [8, 10, 15, 20, 25]
+        scipy_solutions = []
+
+        print("using scipy.optimize.fsolve:")
+        for guess in initial_guesses:
+            solution = fsolve(force_error, guess)[0]
+            if 5 <= solution <= 30:  # Valid range
+                force, torque = predictor.predict(currL=0, currR=0, roll=0, gap_height=solution)
+                error = abs(force - target_force_per_yoke)
+                if error < 0.01:  # Valid solution (within 10 mN)
+                    scipy_solutions.append((solution, force))
+
+        # Remove duplicates (solutions within 0.1 mm)
+        unique_solutions = []
+        for sol, force in scipy_solutions:
+            is_duplicate = False
+            for unique_sol, _ in unique_solutions:
+                if abs(sol - unique_sol) < 0.1:
+                    is_duplicate = True
+                    break
+            if not is_duplicate:
+                unique_solutions.append((sol, force))
+
+        for gap_val, force in unique_solutions:
+            print(f"  Gap: {gap_val:.6f} mm  →  Force: {force:.6f} N")
+        print()
+
+[14]. Tool: Gemini
+      Prompt:
+        Can we make a step function that uses our ansys-based regression model to find
+        forces on each yoke and apply them to the Bullet simulation? Also, we must
+        calculate a reward for any given pod position and orientation, prioritizing
+        stable levitation and penalizing sticking to the track or falling off more heavily
+
+      Output:
+        def step(self, action):
+            # Check if PyBullet connection is still active (GUI might be closed)
+            try:
+                p.getConnectionInfo(physicsClientId=self.client)
+            except p.error:
+                # Connection lost - GUI was closed
+                return self._get_obs(), -100.0, True, True, {'error': 'GUI closed'}
+            
+            # Update Coil Currents from PWM Actions
+            pwm_front_L = action[0]  # yoke +x,+y
+            pwm_front_R = action[1]  # yoke +x,-y
+            pwm_back_L = action[2]   # yoke -x,+y
+            pwm_back_R = action[3]   # yoke -x,-y
+            
+            curr_front_L = self.coil_front_L.update(pwm_front_L, self.dt)
+            curr_front_R = self.coil_front_R.update(pwm_front_R, self.dt)
+            curr_back_L = self.coil_back_L.update(pwm_back_L, self.dt)
+            curr_back_R = self.coil_back_R.update(pwm_back_R, self.dt)
+            
+            # --- 2. Get Current Pod State ---
+            pos, orn = p.getBasePositionAndOrientation(self.podId, physicsClientId=self.client)
+            lin_vel, ang_vel = p.getBaseVelocity(self.podId, physicsClientId=self.client)
+            
+            # Convert quaternion to rotation matrix
+            rot_matrix = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
+            
+            # --- 3. Calculate Gap Heights at Yoke Positions (for force prediction) ---
+            # Calculate world positions of the 4 yokes (ends of U-yokes)
+            yoke_gap_heights_dict = {}  # Store by label for easy access
+            
+            for i, yoke_idx in enumerate(self.yoke_indices):
+                local_pos = self.collision_local_positions[yoke_idx]
+                local_vec = np.array(local_pos)
+                world_offset = rot_matrix @ local_vec
+                world_pos = np.array(pos) + world_offset
+                
+                # Top surface of yoke box (add half-height = 5mm)
+                yoke_top_z = world_pos[2] + 0.005
+                
+                # Gap height: track bottom (Z=0) to yoke top (negative Z)
+                gap_height = -yoke_top_z  # Convert to positive gap in meters
+                yoke_gap_heights_dict[self.yoke_labels[i]] = gap_height
+            
+            # Average gap heights for each U-shaped yoke (average left and right ends)
+            # Front yoke: average of Front_Left and Front_Right
+            # Back yoke: average of Back_Left and Back_Right
+            avg_gap_front = (yoke_gap_heights_dict.get('Front_Left', 0.010) + 
+                            yoke_gap_heights_dict.get('Front_Right', 0.010)) / 2
+            avg_gap_back = (yoke_gap_heights_dict.get('Back_Left', 0.010) + 
+                          yoke_gap_heights_dict.get('Back_Right', 0.010)) / 2
+            
+            front_left_gap = yoke_gap_heights_dict.get('Front_Left', 0.010)
+            front_right_gap = yoke_gap_heights_dict.get('Front_Right', 0.010)
+            back_left_gap = yoke_gap_heights_dict.get('Back_Left', 0.010)
+            back_right_gap = yoke_gap_heights_dict.get('Back_Right', 0.010)
+            
+            y_distance = 0.1016  # 2 * 0.0508m (left to right distance)
+            x_distance = 0.2518  # 2 * 0.1259m (front to back distance)
+            
+            # Roll angle
+            # When right side has larger gap, roll is negative
+            roll_angle_front = np.arcsin(-(front_right_gap - front_left_gap) / y_distance)
+            roll_angle_back = np.arcsin(-(back_right_gap - back_left_gap) / y_distance)
+            roll_angle = (roll_angle_front + roll_angle_back) / 2
+            
+            # When back has larger gap, pitch is positive
+            pitch_angle_left = np.arcsin((back_left_gap - front_left_gap) / x_distance)
+            pitch_angle_right = np.arcsin((back_right_gap - front_right_gap) / x_distance)
+            pitch_angle = (pitch_angle_left + pitch_angle_right) / 2
+            
+            # Predict Forces and Torques using Maglev Predictor
+            # Gap heights in mm
+            gap_front_mm = avg_gap_front * 1000
+            gap_back_mm = avg_gap_back * 1000
+            
+            # Roll angle in degrees
+            roll_deg = np.degrees(roll_angle)
+            
+            # Predict force and torque for each U-shaped yoke
+            # Front yoke
+            force_front, torque_front = self.predictor.predict(
+                curr_front_L, curr_front_R, roll_deg, gap_front_mm
+            )
+            
+            # Back yoke
+            force_back, torque_back = self.predictor.predict(
+                curr_back_L, curr_back_R, roll_deg, gap_back_mm
+            )
+            
+            # --- 5. Apply Forces and Torques to Pod ---
+            # Forces are applied at Y=0 (center of U-yoke) at each X position
+            # This is where the actual magnetic force acts on the U-shaped yoke
+            
+            # Apply force at front yoke center (X=+0.1259, Y=0)
+            front_yoke_center = [0.1259, 0, 0.08585]  # From pod.xml yoke positions
+            p.applyExternalForce(
+                self.podId, -1,
+                forceObj=[0, 0, force_front],
+                posObj=front_yoke_center,
+                flags=p.LINK_FRAME,
+                physicsClientId=self.client
+            )
+            
+            # Apply force at back yoke center (X=-0.1259, Y=0)
+            back_yoke_center = [-0.1259, 0, 0.08585]
+            p.applyExternalForce(
+                self.podId, -1,
+                forceObj=[0, 0, force_back],
+                posObj=back_yoke_center,
+                flags=p.LINK_FRAME,
+                physicsClientId=self.client
+            )
+
+            
+            
+            # Apply roll torques
+            # Each yoke produces its own torque about X axis
+            torque_front_Nm = torque_front / 1000  # Convert from mN·m to N·m
+            torque_back_Nm = torque_back / 1000
+            
+            # Apply torques at respective yoke positions
+            p.applyExternalTorque(
+                self.podId, -1,
+                torqueObj=[torque_front_Nm, 0, 0],
+                flags=p.LINK_FRAME,
+                physicsClientId=self.client
+            )
+            p.applyExternalTorque(
+                self.podId, -1,
+                torqueObj=[torque_back_Nm, 0, 0],
+                flags=p.LINK_FRAME,
+                physicsClientId=self.client
+            )
+            
+            # --- 6. Step Simulation ---
+            p.stepSimulation(physicsClientId=self.client)
+            self.current_step += 1
+            
+            # Check for physical contact with track (bolts touching)
+            contact_points = p.getContactPoints(bodyA=self.podId, bodyB=self.trackId, physicsClientId=self.client)
+            has_contact = len(contact_points) > 0
+            
+            # --- 7. Get New Observation ---
+            obs = self._get_obs()
+            
+            # --- 8. Calculate Reward ---
+            # Goal: Hover at target gap (16.5mm), minimize roll/pitch, minimize power
+            target_gap = TARGET_GAP  # 16.5mm in meters
+            avg_gap = (avg_gap_front + avg_gap_back) / 2
+            
+            gap_error = abs(avg_gap - target_gap)
+            
+            # Power dissipation (all 4 coils)
+            power = (curr_front_L**2 * self.coil_front_L.R + 
+                    curr_front_R**2 * self.coil_front_R.R +
+                    curr_back_L**2 * self.coil_back_L.R +
+                    curr_back_R**2 * self.coil_back_R.R)
+            
+            # --- Improved Reward Function ---
+            # Use reward shaping with reasonable scales to enable learning
+            
+            # 1. Gap Error Reward (most important)
+            # Use exponential decay for smooth gradient near target
+            gap_error_mm = gap_error * 1000  # Convert to mm
+            gap_reward = 10.0 * np.exp(-0.5 * (gap_error_mm / 3.0)**2)  # Peak at 0mm error, 3mm std dev
+            
+            # 2. Orientation Penalties (smaller scale)
+            roll_penalty = abs(np.degrees(roll_angle)) * 0.02
+            pitch_penalty = abs(np.degrees(pitch_angle)) * 0.02
+            
+            # 3. Velocity Penalty (discourage rapid oscillations)
+            z_velocity = lin_vel[2]
+            velocity_penalty = abs(z_velocity) * 0.1
+            
+            # 4. Contact Penalty
+            contact_points = p.getContactPoints(bodyA=self.podId, bodyB=self.trackId)
+            contact_penalty = len(contact_points) * 0.2
+            
+            # 5. Power Penalty (encourage efficiency, but small weight)
+            power_penalty = power * 0.001
+            
+            # Combine rewards (scaled to ~[-5, +1] range per step)
+            reward = gap_reward - roll_penalty - pitch_penalty - velocity_penalty - contact_penalty - power_penalty
+            
+            # Check Termination (tighter bounds for safety)
+            terminated = False
+            truncated = False
+            
+            # Terminate if gap is too small (crash) or too large (lost)
+            if avg_gap < 0.003 or avg_gap > 0.035:
+                terminated = True
+                reward = -10.0  # Failure penalty (scaled down)
+                
+            # Terminate if orientation is too extreme
+            if abs(roll_angle) > np.radians(15) or abs(pitch_angle) > np.radians(15):
+                terminated = True
+                reward = -10.0
+                
+            # Success bonus for stable hovering near target
+            if gap_error_mm < 1.0 and abs(np.degrees(roll_angle)) < 2.0 and abs(np.degrees(pitch_angle)) < 2.0:
+                reward += 2.0  # Bonus for excellent control
+            
+            info = {
+                'curr_front_L': curr_front_L,
+                'curr_front_R': curr_front_R,
+                'curr_back_L': curr_back_L,
+                'curr_back_R': curr_back_R,
+                'gap_front_yoke': avg_gap_front,
+                'gap_back_yoke': avg_gap_back,
+                'roll': roll_angle,
+                'force_front': force_front,
+                'force_back': force_back,
+                'torque_front': torque_front,
+                'torque_back': torque_back
+            }
+            
+            return obs, reward, terminated, truncated, info
+
+[15]. Tool: Gemini
+      Prompt:
+        Let's also have an observation function that constructs the input vector that the RL agent sees.
+        This should consist of the noisy sensor readings and the velocities of each of these sensors.
+        They should be normalized in a way that is friendly to a neural network, ie floating point values
+        on [-1,1] ideally.
+
+      Output:
+        def _get_obs(self, initial_reset=False):
+            """
+            Returns observation: [gaps(4), velocities(4)]
+            Uses noisy sensor readings + computed velocities for microcontroller-friendly deployment
+            """
+            pos, orn = p.getBasePositionAndOrientation(self.podId, physicsClientId=self.client)
+            
+            # Convert quaternion to rotation matrix
+            rot_matrix = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
+            
+            # Calculate sensor gap heights with noise
+            sensor_gap_heights = {}
+            
+            for i, sensor_idx in enumerate(self.sensor_indices):
+                local_pos = self.collision_local_positions[sensor_idx]
+                local_vec = np.array(local_pos)
+                world_offset = rot_matrix @ local_vec
+                world_pos = np.array(pos) + world_offset
+                
+                # Top surface of sensor (add half-height = 5mm)
+                sensor_top_z = world_pos[2] + 0.005
+                
+                # Gap height: track bottom (Z=0) to sensor top
+                gap_height = -sensor_top_z
+                
+                # Add measurement noise
+                noisy_gap = gap_height + np.random.normal(0, self.sensor_noise_std)
+                sensor_gap_heights[self.sensor_labels[i]] = noisy_gap
+                sensor_gap_heights[self.sensor_labels[i]] = gap_height
+            
+            # Pack sensor measurements in consistent order
+            # [center_right, center_left, front, back]
+            gaps = np.array([
+                sensor_gap_heights.get('Center_Right', 0.010),
+                sensor_gap_heights.get('Center_Left', 0.010),
+                sensor_gap_heights.get('Front', 0.010),
+                sensor_gap_heights.get('Back', 0.010)
+            ], dtype=np.float32)
+            
+            # Compute velocities (d_gap/dt)
+            if initial_reset or (self.prev_sensor_gaps is None):
+                # First observation - no velocity information yet
+                velocities = np.zeros(4, dtype=np.float32)
+            else:
+                # Compute velocity as finite difference
+                velocities = (gaps - self.prev_sensor_gaps) / self.dt
+            
+            # Store for next step
+            self.prev_sensor_gaps = gaps.copy()
+            
+            # Normalize observations
+            gaps_normalized = (gaps - TARGET_GAP) / self.gap_scale
+            velocities_normalized = velocities / self.velocity_scale
+            
+            # Concatenate: [normalized_gaps, normalized_velocities]
+            obs = np.concatenate([gaps_normalized, velocities_normalized])
+            
+            return obs
+
+[16]. Tool: Gemini
+      Prompt:
+        I now need a function that will allow the initial height setting to modify
+        the position of the bolts in the Bullet sim, mirroring how the rig is set
+        up in real life, as detailed in previous chats.
+
+      Output:
+        def _create_modified_urdf(self):
+            """
+            Create a modified URDF with bolt positions adjusted based on initial gap height.
+            Bolts are at Z = 0.08585 + gap_mm/1000 (relative to pod origin).
+            Yokes and sensors remain at Z = 0.08585 (relative to pod origin).
+            """
+            import tempfile
+            
+            # Calculate bolt Z position
+            bolt_z = 0.08585 + self.initial_gap_mm / 1000.0
+            
+            # Read the original URDF template
+            urdf_template_path = os.path.join(os.path.dirname(__file__), "pod.xml")
+            with open(urdf_template_path, 'r') as f:
+                urdf_content = f.read()
+            
+            # Replace the bolt Z positions (originally at 0.09585)
+            # There are 4 bolts at different X,Y positions but same Z
+            urdf_modified = urdf_content.replace(
+                'xyz="0.285 0.03 0.09585"',
+                f'xyz="0.285 0.03 {bolt_z:.6f}"'
+            ).replace(
+                'xyz="0.285 -0.03 0.09585"',
+                f'xyz="0.285 -0.03 {bolt_z:.6f}"'
+            ).replace(
+                'xyz="-0.285 0.03 0.09585"',
+                f'xyz="-0.285 0.03 {bolt_z:.6f}"'
+            ).replace(
+                'xyz="-0.285 -0.03 0.09585"',
+                f'xyz="-0.285 -0.03 {bolt_z:.6f}"'
+            )
+            
+            # Write to a temporary file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.urdf', delete=False) as f:
+                f.write(urdf_modified)
+                temp_urdf_path = f.name
+            
+            return temp_urdf_path
+
+[17]. Tool: Gemini
+      Prompt:
+        Can you generate a python class that simulates the coil inductance and resistance,
+        taking in a PWM duty cycle and applying a voltage based on that duty cycle to get
+        an output current? 
+      
+      Output:
+        class MagLevCoil:
+        def __init__(self, r_resistance, l_inductance, source_voltage, maxCurrent):
+            self.R = r_resistance
+            self.L = l_inductance
+            self.current = 0.0
+            self.Vs = source_voltage
+            self.Imax = maxCurrent
+        
+        def update(self, pwm_duty_cycle, dt):
+            """
+            Simulates the coil circuit and force generation.
+            pwm_duty_cycle: -1.0 to 1.0
+            """
+            # Simple First-order RL circuit approximation
+            # V_in = Duty * V_source
+            voltage = pwm_duty_cycle * self.Vs
+            
+            # di/dt = (V - I*R) / L
+            di = (voltage - self.current * self.R) / self.L
+            self.current += di * dt
+            self.current = min(max(-self.Imax, self.current), self.Imax)
+            
+            return self.current
+
+[18]. Tool: Claude Code
+      Prompt:
+        Can you generate a testing script that allows me to input a starting height
+        and dummy PWM values to the levitation environment so I can do a sanity check 
+        and see if the environment behaves correctly?
+
+      Output:
+        """
+        Test script for LevPodEnv
+        Runs a simple episode with constant actions to verify the environment works
+        """
+
+        from lev_pod_env import LevPodEnv
+        import numpy as np
+        import time
+
+        # Create environment with GUI for visualization
+        env = LevPodEnv(use_gui=True, initial_gap_mm=15)
+
+        print("=" * 60)
+        print("Testing LevPodEnv")
+        print("=" * 60)
+        print(f"Action space: {env.action_space}")
+        print(f"  4 PWM duty cycles: [front_L, front_R, back_L, back_R]")
+        print(f"Observation space: {env.observation_space}")
+        print(f"  8 values: [gaps(4), velocities(4)]")
+        print("=" * 60)
+
+        # Reset environment
+        obs, info = env.reset()
+        print(f"\nInitial observation:")
+        print(f"  Gaps: CR={obs[0]*1000:.2f}mm, CL={obs[1]*1000:.2f}mm, F={obs[2]*1000:.2f}mm, B={obs[3]*1000:.2f}mm")
+        print(f"  Velocities: CR={obs[4]*1000:.2f}mm/s, CL={obs[5]*1000:.2f}mm/s, F={obs[6]*1000:.2f}mm/s, B={obs[7]*1000:.2f}mm/s")
+        print(f"  Average gap: {np.mean(obs[:4])*1000:.2f} mm")
+
+        # Run a few steps with constant action to test force application
+        print("\nRunning test episode...")
+        for step in range(500):
+            # Apply constant moderate PWM to all 4 coils
+            # 50% PWM should generate current that produces upward force
+            action = np.array([0,0,0,0], dtype=np.float32)
+            
+            obs, reward, terminated, truncated, info = env.step(action)
+            
+            if step % 5 == 0:
+                print(f"\nStep {step} (t={step/240:.2f}s):")
+                print(f"  Sensor gaps: CR={obs[0]*1000:.2f}mm, CL={obs[1]*1000:.2f}mm, " +
+                      f"F={obs[2]*1000:.2f}mm, B={obs[3]*1000:.2f}mm")
+                print(f"  Velocities: CR={obs[4]*1000:.2f}mm/s, CL={obs[5]*1000:.2f}mm/s, " +
+                      f"F={obs[6]*1000:.2f}mm/s, B={obs[7]*1000:.2f}mm/s")
+                print(f"  Yoke gaps: front={info['gap_front_yoke']*1000:.2f}mm, back={info['gap_back_yoke']*1000:.2f}mm")
+                print(f"  Roll: {np.degrees(info['roll']):.2f}°")
+                print(f"  Currents: FL={info['curr_front_L']:.2f}A, FR={info['curr_front_R']:.2f}A, " +
+                      f"BL={info['curr_back_L']:.2f}A, BR={info['curr_back_R']:.2f}A")
+                print(f"  Forces: front={info['force_front']:.2f}N, back={info['force_back']:.2f}N")
+                print(f"  Torques: front={info['torque_front']:.2f}mN·m, back={info['torque_back']:.2f}mN·m")
+                print(f"  Reward: {reward:.2f}")
+            
+            if terminated or truncated:
+                print(f"\nEpisode terminated at step {step}")
+                break
+            
+            time.sleep(0.01)
+
+        print("\n" + "=" * 60)
+        print("Test complete!")
+        print("=" * 60)
+
+        env.close()
+
+[19]. Tool: Claude Code
+      Prompt:
+        Can we intialize the existing model structure in the rest of the file
+        around our use case, with the environment being the lev_pod_env? Additionally,
+        I want to be able to see what the theoretical maximum reward is, so I can see how
+        well the agent is performing over time without having to use the GUI simulation
+        environment.
+
+      Output:
+        environ = LevPodEnv(use_gui=False, initial_gap_mm=14, max_steps=500)  # Start below target
+        model = ActorCriticNetwork(environ.observation_space.shape[0], environ.action_space.shape[0]).to(device)
+        train_data, reward, gap_error = rollout(model, environ)
+        print("Reward:", reward)
+        print("Episode length:", len(train_data[0]))
+        print("Reward per step:", reward / len(train_data[0]))
+        print(f"Average gap error: {gap_error:.3f} mm")
+
+        # Calculate theoretical maximum reward for reference (NEW REWARD STRUCTURE)
+        max_steps = 500
+        # Best case: gap_reward=1.0, no penalties, success_bonus=2.0
+        theoretical_max_per_step = 3.0  # 1.0 (gap) + 2.0 (success bonus) + 0 (no penalties)
+        # Realistic good case: gap_reward~0.9, small penalties
+        realistic_good_per_step = 0.8
+        theoretical_max_total = theoretical_max_per_step * max_steps
+        realistic_good_total = realistic_good_per_step * max_steps
+
+        print(f"\nTheoretical Maximum:")
+        print(f"  Best per step: {theoretical_max_per_step:.2f}")
+        print(f"  Realistic good per step: {realistic_good_per_step:.2f}")
+        print(f"  Best total (500 steps): {theoretical_max_total:.0f}")
+        print(f"  Current % of realistic: {(reward/realistic_good_total)*100:.1f}%")
+
+[20]. Tool: Claude Code
+      Prompt:
+        Can we improve our reward function, and see how it drops off as the gap error increases?
+        It seems the pod is getting too comfortable sitting at the track or just falling away and
+        not learning to levitate at a very specific gap height.
+        
+      Output:
+        # Visualize the new reward function
+        gap_errors_mm = np.linspace(0, 20, 100)
+        gap_rewards = np.exp(-0.5 * (gap_errors_mm / 3.0)**2)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(gap_errors_mm, gap_rewards, linewidth=2)
+        plt.axvline(x=1.0, color='g', linestyle='--', label='Success bonus threshold (1mm)')
+        plt.axvline(x=3.0, color='orange', linestyle='--', label='1 std dev (3mm)')
+        plt.xlabel('Gap Error (mm)', fontsize=12)
+        plt.ylabel('Gap Reward Component', fontsize=12)
+        plt.title('New Reward Function: Smooth Exponential Decay', fontsize=14, fontweight='bold')
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        print("Reward examples at different gap errors:")
+        for err in [0, 1, 3, 5, 10, 15]:
+            reward = np.exp(-0.5 * (err / 3.0)**2)
+            print(f"  {err:2d}mm error → {reward:.4f} reward")
+        print("\nCompare to old reward: (error*100)² would be:")
+        for err in [1, 3, 5, 10]:
+            old_penalty = (err * 100)**2
+            print(f"  {err:2d}mm error → -{old_penalty:,} penalty")
+
+[21]. Tool: Claude Code
+      Prompt:
+        I want to store log files that show the accumulated reward over time
+        for each trial, as well as a mean gap error chart that should show whether
+        the model is learning to control at 0 gap error.
+
+      Output:
+        import os
+        from datetime import datetime
+
+        # Create RL_Trials folder if it doesn't exist
+        os.makedirs('RL_Trials', exist_ok=True)
+
+        # Create timestamped log file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file_path = f'RL_Trials/training_log_{timestamp}.txt'
+        plot_file_path = f'RL_Trials/gap_error_plot_{timestamp}.png'
+
+        # Define training params
+        num_episodes = 2000  # Increased for more learning time
+        print_freq = 20  # Print less frequently
+        gui_freq = 100  # Show GUI every 100 episodes
+
+        # Create PPO trainer with improved hyperparameters
+        ppo = PPOTrainer(
+            model, 
+            policy_lr=5e-4,          # Higher learning rate
+            value_lr=1e-3,           # Even higher for value function
+            target_kl_div=0.02,      # Allow more policy updates
+            max_policy_train_iters=40,
+            value_train_iters=40,
+            entropy_coef=0.02        # More exploration
+        )
+
+        # Open log file
+        log_file = open(log_file_path, 'w')
+        log_file.write(f"Training Started: {timestamp}\n")
+        log_file.write(f"Number of Episodes: {num_episodes}\n")
+        log_file.write(f"Print Frequency: {print_freq}\n")
+        log_file.write(f"Target Gap Height: {16.491741} mm\n")
+        log_file.write(f"Network: 256 hidden units with LayerNorm\n")
+        log_file.write(f"Policy LR: 5e-4, Value LR: 1e-3, Entropy: 0.02\n")
+        log_file.write("="*70 + "\n\n")
+        log_file.flush()
+
+        print(f"Logging to: {log_file_path}")
+        print(f"Plot will be saved to: {plot_file_path}")
+
+        # Create and save gap error plot
+        plt.figure(figsize=(12, 6))
+        plt.plot(ep_gap_errors, alpha=0.3, label='Per Episode')
+
+        # Calculate moving average (window size = print_freq)
+        window_size = print_freq
+        if len(ep_gap_errors) >= window_size:
+            moving_avg = np.convolve(ep_gap_errors, np.ones(window_size)/window_size, mode='valid')
+            plt.plot(range(window_size-1, len(ep_gap_errors)), moving_avg, linewidth=2, label=f'{window_size}-Episode Moving Average')
+
+        plt.xlabel('Episode', fontsize=12)
+        plt.ylabel('Average Gap Height Error (mm)', fontsize=12)
+        plt.title('Gap Height Error Over Training, n_steps=500', fontsize=14, fontweight='bold')
+        plt.legend(fontsize=11)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(plot_file_path, dpi=150, bbox_inches='tight')
+        plt.show()
+
+        print(f"\n✓ Training log saved to: {log_file_path}")
+        print(f"✓ Gap error plot saved to: {plot_file_path}")
