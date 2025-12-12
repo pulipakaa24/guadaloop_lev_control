@@ -1,0 +1,12 @@
+Training Started: 20251211_185541
+Number of Episodes: 2000
+Print Frequency: 20
+Target Gap Height: 16.491741 mm
+Network: 256 hidden units with LayerNorm
+Policy LR: 5e-4, Value LR: 1e-3, Entropy: 0.02
+======================================================================
+
+Ep   20 | R: -264.1 | Len:  28 | R/s: -9.47 (-1183.4%) | Gap: 20.27mm (min:11.48) | Best: 11.48mm
+Ep   40 | R: -222.6 | Len:  24 | R/s: -9.45 (-1181.5%) | Gap: 21.62mm (min:19.97) | Best: 11.48mm
+Ep   60 | R: -211.8 | Len:  23 | R/s: -9.37 (-1171.3%) | Gap: 21.47mm (min:19.53) | Best: 11.48mm
+Ep   80 | R: -144.7 | Len:  15 | R/s: -9.65 (-1206.2%) | Gap: 21.89mm (min:20.01) | Best: 11.48mm

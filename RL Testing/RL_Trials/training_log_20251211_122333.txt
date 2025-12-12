@@ -1,0 +1,19 @@
+Training Started: 20251211_122333
+Number of Episodes: 2000
+Print Frequency: 20
+Target Gap Height: 16.491741 mm
+Network: 256 hidden units with LayerNorm
+Policy LR: 5e-4, Value LR: 1e-3, Entropy: 0.02
+======================================================================
+
+Ep   20 | R: -16150.6 | Len: 500 | R/s: -32.30 (-4037.7%) | Gap:  4.18mm (min: 4.10) | Best:  4.10mm
+Ep   40 | R: -16154.2 | Len: 500 | R/s: -32.31 (-4038.5%) | Gap:  4.18mm (min: 4.13) | Best:  4.10mm
+Ep   60 | R: -16155.5 | Len: 500 | R/s: -32.31 (-4038.9%) | Gap:  4.16mm (min: 4.12) | Best:  4.10mm
+Ep   80 | R: -16151.9 | Len: 500 | R/s: -32.30 (-4038.0%) | Gap:  4.20mm (min: 4.13) | Best:  4.10mm
+Ep  100 | R: -16155.1 | Len: 500 | R/s: -32.31 (-4038.8%) | Gap:  4.18mm (min: 4.13) | Best:  4.10mm
+Ep  120 | R: -16155.3 | Len: 500 | R/s: -32.31 (-4038.8%) | Gap:  4.19mm (min: 4.14) | Best:  4.10mm
+Ep  140 | R: -16154.6 | Len: 500 | R/s: -32.31 (-4038.7%) | Gap:  4.18mm (min: 4.12) | Best:  4.10mm
+Ep  160 | R: -16154.8 | Len: 500 | R/s: -32.31 (-4038.7%) | Gap:  4.19mm (min: 4.12) | Best:  4.10mm
+Ep  180 | R: -16157.5 | Len: 500 | R/s: -32.32 (-4039.4%) | Gap:  4.19mm (min: 4.11) | Best:  4.10mm
+Ep  200 | R: -16157.7 | Len: 500 | R/s: -32.32 (-4039.4%) | Gap:  4.21mm (min: 4.17) | Best:  4.10mm
+Ep  220 | R: -16159.4 | Len: 500 | R/s: -32.32 (-4039.8%) | Gap:  4.19mm (min: 4.12) | Best:  4.10mm

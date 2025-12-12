@@ -1,0 +1,29 @@
+first trial was with plain gap-error minimization reward, 
+
+    # --- FIX 2: Smoother Reward Function ---
+    # Reward function
+    reward = 1.0 # Survival bonus
+    
+    # Distance Penalty (Squared is smoother than linear for fine control)
+    reward -= (gap_error * 100)**2 
+    
+    # Orientation Penalties
+    reward -= (roll_angle * 10)**2
+    reward -= (pitch_angle * 10)**2
+
+next, added the following:
+
+  contact_points = p.getContactPoints(bodyA=self.podId, bodyB=self.trackId)
+  has_contact = len(contact_points) > 0
+
+  # Don't terminate on contact.
+  # Instead, penalize it, but allow the episode to continue so it can try to fix it.
+  # if has_contact:
+      # 5.0 is painful, but surviving 100 steps of pain is better than immediate death (-50)
+  reward -= len(contact_points)
+
+# at this point, we still either stick or fall, no hovering training has been achieved.
+
+# Tried increasing lambda value and starting at optimal all the time.
+
+#Tried reducing entropy and resetting all params but allowing for full range of motion without bolts - 7 pm ish
