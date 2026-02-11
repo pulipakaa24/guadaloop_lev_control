@@ -1,0 +1,430 @@
+Magnetic Levitation Force & Torque — Explicit Polynomial Equations
+Polynomial Degree: 6
+Variables:
+  currL [A]      = Left coil current
+  currR [A]      = Right coil current
+  rollDeg [deg]  = Roll angle
+  invGap         = 1 / GapHeight [1/mm]
+
+================================================================================
+FORCE [N] = 
+    -1.3837763236e+01
+  + (+3.4900958018e-01) * currL [A]
+  + (+3.4444782070e-01) * currR [A]
+  + (+1.3948921341e-07) * rollDeg [deg]
+  + (+6.3404397040e+02) * invGap
+  + (+2.0808153074e-02) * currL [A]^2
+  + (-8.2940557511e-04) * currL [A] * currR [A]
+  + (+2.2629904125e-02) * currL [A] * rollDeg [deg]
+  + (-1.4941727622e+01) * currL [A] * invGap
+  + (+2.1137560003e-02) * currR [A]^2
+  + (-2.2629886279e-02) * currR [A] * rollDeg [deg]
+  + (-1.4834895226e+01) * currR [A] * invGap
+  + (-7.3648244412e-01) * rollDeg [deg]^2
+  + (-7.6740357314e-06) * rollDeg [deg] * invGap
+  + (+1.3767217831e+03) * invGap^2
+  + (-1.1531758728e-04) * currL [A]^3
+  + (+7.2971576377e-05) * currL [A]^2 * currR [A]
+  + (+5.4868393021e-06) * currL [A]^2 * rollDeg [deg]
+  + (-1.0521912466e+00) * currL [A]^2 * invGap
+  + (+5.2348894922e-05) * currL [A] * currR [A]^2
+  + (+2.1794350221e-09) * currL [A] * currR [A] * rollDeg [deg]
+  + (+3.2678067078e-02) * currL [A] * currR [A] * invGap
+  + (-6.3017520966e-03) * currL [A] * rollDeg [deg]^2
+  + (-2.6462505434e-01) * currL [A] * rollDeg [deg] * invGap
+  + (-2.9510804409e+01) * currL [A] * invGap^2
+  + (-7.2152022082e-05) * currR [A]^3
+  + (-5.4823932308e-06) * currR [A]^2 * rollDeg [deg]
+  + (-1.0708822638e+00) * currR [A]^2 * invGap
+  + (-6.3914882711e-03) * currR [A] * rollDeg [deg]^2
+  + (+2.6462554272e-01) * currR [A] * rollDeg [deg] * invGap
+  + (-3.0234998506e+01) * currR [A] * invGap^2
+  + (+4.5881294085e-09) * rollDeg [deg]^3
+  + (+2.5797308313e+01) * rollDeg [deg]^2 * invGap
+  + (+4.6682794236e-05) * rollDeg [deg] * invGap^2
+  + (-5.3401486713e+03) * invGap^3
+  + (+1.3320765542e-06) * currL [A]^4
+  + (+3.2152411427e-06) * currL [A]^3 * currR [A]
+  + (+1.2629467079e-05) * currL [A]^3 * rollDeg [deg]
+  + (+1.7892402808e-03) * currL [A]^3 * invGap
+  + (+3.0619624267e-06) * currL [A]^2 * currR [A]^2
+  + (-1.5568499556e-07) * currL [A]^2 * currR [A] * rollDeg [deg]
+  + (-1.0714912904e-03) * currL [A]^2 * currR [A] * invGap
+  + (+8.7713928261e-05) * currL [A]^2 * rollDeg [deg]^2
+  + (+4.5854056157e-03) * currL [A]^2 * rollDeg [deg] * invGap
+  + (+2.0746027602e+01) * currL [A]^2 * invGap^2
+  + (+3.8655549044e-06) * currL [A] * currR [A]^3
+  + (+1.5545726439e-07) * currL [A] * currR [A]^2 * rollDeg [deg]
+  + (-7.0411774478e-04) * currL [A] * currR [A]^2 * invGap
+  + (-3.8261231547e-05) * currL [A] * currR [A] * rollDeg [deg]^2
+  + (-9.5017239129e-09) * currL [A] * currR [A] * rollDeg [deg] * invGap
+  + (+7.0646804762e-01) * currL [A] * currR [A] * invGap^2
+  + (-2.5574383917e-03) * currL [A] * rollDeg [deg]^3
+  + (-3.3355499360e-02) * currL [A] * rollDeg [deg]^2 * invGap
+  + (-2.1337761184e+01) * currL [A] * rollDeg [deg] * invGap^2
+  + (+1.2343471808e+02) * currL [A] * invGap^3
+  + (+7.7592074199e-07) * currR [A]^4
+  + (-1.2629426979e-05) * currR [A]^3 * rollDeg [deg]
+  + (+8.6147973530e-04) * currR [A]^3 * invGap
+  + (+8.0130692138e-05) * currR [A]^2 * rollDeg [deg]^2
+  + (-4.5854241649e-03) * currR [A]^2 * rollDeg [deg] * invGap
+  + (+2.1139446060e+01) * currR [A]^2 * invGap^2
+  + (+2.5574380197e-03) * currR [A] * rollDeg [deg]^3
+  + (-2.9857453053e-02) * currR [A] * rollDeg [deg]^2 * invGap
+  + (+2.1337762097e+01) * currR [A] * rollDeg [deg] * invGap^2
+  + (+1.2514911864e+02) * currR [A] * invGap^3
+  + (+2.9443521553e-02) * rollDeg [deg]^4
+  + (-7.9265644452e-09) * rollDeg [deg]^3 * invGap
+  + (-2.3563990269e+02) * rollDeg [deg]^2 * invGap^2
+  + (+1.6353835994e-04) * rollDeg [deg] * invGap^3
+  + (-2.2354105572e+03) * invGap^4
+  + (+3.1117360777e-07) * currL [A]^5
+  + (-1.8750259301e-07) * currL [A]^4 * currR [A]
+  + (-8.5198564648e-08) * currL [A]^4 * rollDeg [deg]
+  + (-6.3869937977e-05) * currL [A]^4 * invGap
+  + (-1.4911217505e-07) * currL [A]^3 * currR [A]^2
+  + (+1.7061909929e-07) * currL [A]^3 * currR [A] * rollDeg [deg]
+  + (-7.4262537249e-06) * currL [A]^3 * currR [A] * invGap
+  + (+7.2402232831e-07) * currL [A]^3 * rollDeg [deg]^2
+  + (+2.1841125430e-05) * currL [A]^3 * rollDeg [deg] * invGap
+  + (-3.4357925518e-03) * currL [A]^3 * invGap^2
+  + (-1.6416880300e-07) * currL [A]^2 * currR [A]^3
+  + (+3.6385798723e-05) * currL [A]^2 * currR [A]^2 * invGap
+  + (+5.2924336558e-07) * currL [A]^2 * currR [A] * rollDeg [deg]^2
+  + (+8.5467922645e-05) * currL [A]^2 * currR [A] * rollDeg [deg] * invGap
+  + (+4.5573594510e-03) * currL [A]^2 * currR [A] * invGap^2
+  + (-2.9680843072e-05) * currL [A]^2 * rollDeg [deg]^3
+  + (-3.7951808035e-03) * currL [A]^2 * rollDeg [deg]^2 * invGap
+  + (+4.7717250306e-02) * currL [A]^2 * rollDeg [deg] * invGap^2
+  + (-1.4608679078e+02) * currL [A]^2 * invGap^3
+  + (-1.2370955460e-07) * currL [A] * currR [A]^4
+  + (-1.7060417434e-07) * currL [A] * currR [A]^3 * rollDeg [deg]
+  + (-1.3936700967e-05) * currL [A] * currR [A]^3 * invGap
+  + (+4.5908154078e-07) * currL [A] * currR [A]^2 * rollDeg [deg]^2
+  + (-8.5469212391e-05) * currL [A] * currR [A]^2 * rollDeg [deg] * invGap
+  + (+1.6991917750e-03) * currL [A] * currR [A]^2 * invGap^2
+  + (-3.7373312737e-04) * currL [A] * currR [A] * rollDeg [deg]^2 * invGap
+  + (+1.5086926031e-07) * currL [A] * currR [A] * rollDeg [deg] * invGap^2
+  + (-7.5987537316e+00) * currL [A] * currR [A] * invGap^3
+  + (+6.6508849418e-04) * currL [A] * rollDeg [deg]^4
+  + (+9.6378055653e-02) * currL [A] * rollDeg [deg]^3 * invGap
+  + (+2.4435308561e+00) * currL [A] * rollDeg [deg]^2 * invGap^2
+  + (+1.2664933542e+02) * currL [A] * rollDeg [deg] * invGap^3
+  + (+5.1887450366e+01) * currL [A] * invGap^4
+  + (+2.3180087538e-07) * currR [A]^5
+  + (+8.5217195078e-08) * currR [A]^4 * rollDeg [deg]
+  + (-6.9233585420e-05) * currR [A]^4 * invGap
+  + (+7.5608402383e-07) * currR [A]^3 * rollDeg [deg]^2
+  + (-2.1841873013e-05) * currR [A]^3 * rollDeg [deg] * invGap
+  + (+3.1131797033e-03) * currR [A]^3 * invGap^2
+  + (+2.9680840171e-05) * currR [A]^2 * rollDeg [deg]^3
+  + (-3.7292231655e-03) * currR [A]^2 * rollDeg [deg]^2 * invGap
+  + (-4.7717023731e-02) * currR [A]^2 * rollDeg [deg] * invGap^2
+  + (-1.4923564858e+02) * currR [A]^2 * invGap^3
+  + (+6.6540367362e-04) * currR [A] * rollDeg [deg]^4
+  + (-9.6378069105e-02) * currR [A] * rollDeg [deg]^3 * invGap
+  + (+2.3836959223e+00) * currR [A] * rollDeg [deg]^2 * invGap^2
+  + (-1.2664937015e+02) * currR [A] * rollDeg [deg] * invGap^3
+  + (+5.2627468646e+01) * currR [A] * invGap^4
+  + (+1.4646059365e-10) * rollDeg [deg]^5
+  + (-1.0417153181e+00) * rollDeg [deg]^4 * invGap
+  + (+1.1431957446e-06) * rollDeg [deg]^3 * invGap^2
+  + (+9.2056028147e+02) * rollDeg [deg]^2 * invGap^3
+  + (-3.1228040188e-04) * rollDeg [deg] * invGap^4
+  + (-5.9623186232e+02) * invGap^5
+  + (+2.9763214116e-09) * currL [A]^6
+  + (-6.2261733547e-09) * currL [A]^5 * currR [A]
+  + (-3.7175269085e-08) * currL [A]^5 * rollDeg [deg]
+  + (-3.1125615720e-06) * currL [A]^5 * invGap
+  + (-9.9876729109e-09) * currL [A]^4 * currR [A]^2
+  + (-1.3294041423e-08) * currL [A]^4 * currR [A] * rollDeg [deg]
+  + (+2.2610334440e-06) * currL [A]^4 * currR [A] * invGap
+  + (+2.4101829865e-08) * currL [A]^4 * rollDeg [deg]^2
+  + (+2.5320289563e-06) * currL [A]^4 * rollDeg [deg] * invGap
+  + (+2.0532678993e-04) * currL [A]^4 * invGap^2
+  + (-7.0411871889e-09) * currL [A]^3 * currR [A]^3
+  + (+1.1956544199e-08) * currL [A]^3 * currR [A]^2 * rollDeg [deg]
+  + (+1.9188820701e-06) * currL [A]^3 * currR [A]^2 * invGap
+  + (+6.3643952330e-08) * currL [A]^3 * currR [A] * rollDeg [deg]^2
+  + (-3.3660324359e-06) * currL [A]^3 * currR [A] * rollDeg [deg] * invGap
+  + (+1.0594658745e-05) * currL [A]^3 * currR [A] * invGap^2
+  + (-2.5937761805e-07) * currL [A]^3 * rollDeg [deg]^3
+  + (-7.2227672945e-06) * currL [A]^3 * rollDeg [deg]^2 * invGap
+  + (+9.6876113423e-05) * currL [A]^3 * rollDeg [deg] * invGap^2
+  + (+8.5422144858e-03) * currL [A]^3 * invGap^3
+  + (-1.0519386251e-08) * currL [A]^2 * currR [A]^4
+  + (-1.1957411061e-08) * currL [A]^2 * currR [A]^3 * rollDeg [deg]
+  + (+2.1222821118e-06) * currL [A]^2 * currR [A]^3 * invGap
+  + (+4.4935102750e-08) * currL [A]^2 * currR [A]^2 * rollDeg [deg]^2
+  + (-1.2807847845e-04) * currL [A]^2 * currR [A]^2 * invGap^2
+  + (+5.7679319987e-08) * currL [A]^2 * currR [A] * rollDeg [deg]^3
+  + (-1.4777475671e-05) * currL [A]^2 * currR [A] * rollDeg [deg]^2 * invGap
+  + (-2.5449360510e-04) * currL [A]^2 * currR [A] * rollDeg [deg] * invGap^2
+  + (-1.2272562713e-02) * currL [A]^2 * currR [A] * invGap^3
+  + (+8.8287809685e-07) * currL [A]^2 * rollDeg [deg]^4
+  + (+4.4586018461e-04) * currL [A]^2 * rollDeg [deg]^3 * invGap
+  + (+3.8576999819e-02) * currL [A]^2 * rollDeg [deg]^2 * invGap^2
+  + (+3.4044411238e-01) * currL [A]^2 * rollDeg [deg] * invGap^3
+  + (+3.5950095140e+02) * currL [A]^2 * invGap^4
+  + (-8.4967268776e-09) * currL [A] * currR [A]^5
+  + (+1.3295050394e-08) * currL [A] * currR [A]^4 * rollDeg [deg]
+  + (+1.7032328259e-06) * currL [A] * currR [A]^4 * invGap
+  + (+7.0043846279e-08) * currL [A] * currR [A]^3 * rollDeg [deg]^2
+  + (+3.3657944138e-06) * currL [A] * currR [A]^3 * rollDeg [deg] * invGap
+  + (+6.8900834879e-05) * currL [A] * currR [A]^3 * invGap^2
+  + (-5.7674824028e-08) * currL [A] * currR [A]^2 * rollDeg [deg]^3
+  + (-1.4623729019e-05) * currL [A] * currR [A]^2 * rollDeg [deg]^2 * invGap
+  + (+2.5450219980e-04) * currL [A] * currR [A]^2 * rollDeg [deg] * invGap^2
+  + (-1.0593500843e-03) * currL [A] * currR [A]^2 * invGap^3
+  + (+1.0484950490e-06) * currL [A] * currR [A] * rollDeg [deg]^4
+  + (-3.0932389983e-10) * currL [A] * currR [A] * rollDeg [deg]^3 * invGap
+  + (+5.6370243409e-03) * currL [A] * currR [A] * rollDeg [deg]^2 * invGap^2
+  + (-6.1682354633e-07) * currL [A] * currR [A] * rollDeg [deg] * invGap^3
+  + (+2.2923219836e+01) * currL [A] * currR [A] * invGap^4
+  + (-2.3420164800e-05) * currL [A] * rollDeg [deg]^5
+  + (-9.2739975478e-03) * currL [A] * rollDeg [deg]^4 * invGap
+  + (-7.4080422659e-01) * currL [A] * rollDeg [deg]^3 * invGap^2
+  + (-2.1756879968e+01) * currL [A] * rollDeg [deg]^2 * invGap^3
+  + (-3.5929041347e+02) * currL [A] * rollDeg [deg] * invGap^4
+  + (+1.3909390562e+01) * currL [A] * invGap^5
+  + (+6.1617129177e-09) * currR [A]^6
+  + (+3.7175730938e-08) * currR [A]^5 * rollDeg [deg]
+  + (-2.1826492898e-06) * currR [A]^5 * invGap
+  + (+3.0887363778e-08) * currR [A]^4 * rollDeg [deg]^2
+  + (-2.5321109476e-06) * currR [A]^4 * rollDeg [deg] * invGap
+  + (+2.0057675659e-04) * currR [A]^4 * invGap^2
+  + (+2.5936417813e-07) * currR [A]^3 * rollDeg [deg]^3
+  + (-7.9156716870e-06) * currR [A]^3 * rollDeg [deg]^2 * invGap
+  + (-9.6870862064e-05) * currR [A]^3 * rollDeg [deg] * invGap^2
+  + (-1.1576514633e-02) * currR [A]^3 * invGap^3
+  + (+1.0210733379e-06) * currR [A]^2 * rollDeg [deg]^4
+  + (-4.4586066717e-04) * currR [A]^2 * rollDeg [deg]^3 * invGap
+  + (+3.8287512141e-02) * currR [A]^2 * rollDeg [deg]^2 * invGap^2
+  + (-3.4044501906e-01) * currR [A]^2 * rollDeg [deg] * invGap^3
+  + (+3.6814992351e+02) * currR [A]^2 * invGap^4
+  + (+2.3420159192e-05) * currR [A] * rollDeg [deg]^5
+  + (-9.2337309491e-03) * currR [A] * rollDeg [deg]^4 * invGap
+  + (+7.4080431520e-01) * currR [A] * rollDeg [deg]^3 * invGap^2
+  + (-2.1520950367e+01) * currR [A] * rollDeg [deg]^2 * invGap^3
+  + (+3.5929051935e+02) * currR [A] * rollDeg [deg] * invGap^4
+  + (+1.4109361400e+01) * currR [A] * invGap^5
+  + (+1.7232857807e-04) * rollDeg [deg]^6
+  + (-1.5228368774e-09) * rollDeg [deg]^5 * invGap
+  + (+7.4229949571e+00) * rollDeg [deg]^4 * invGap^2
+  + (-4.7116044996e-06) * rollDeg [deg]^3 * invGap^3
+  + (+4.0058823232e+02) * rollDeg [deg]^2 * invGap^4
+  + (+7.4032294285e-04) * rollDeg [deg] * invGap^5
+  + (-1.3151563792e+02) * invGap^6
+
+================================================================================
+TORQUE [mN*m] = 
+    -2.5609643910e+00
+  + (+1.2736755974e+01) * currL [A]
+  + (-1.3082527996e+01) * currR [A]
+  + (-1.3305641735e+01) * rollDeg [deg]
+  + (+4.4151637366e+01) * invGap
+  + (-6.3923649292e-02) * currL [A]^2
+  + (-1.1560951475e-02) * currL [A] * currR [A]
+  + (+1.8386370689e+00) * currL [A] * rollDeg [deg]
+  + (-4.5922645259e+02) * currL [A] * invGap
+  + (+9.8233200925e-02) * currR [A]^2
+  + (+1.8386371393e+00) * currR [A] * rollDeg [deg]
+  + (+4.7236896866e+02) * currR [A] * invGap
+  + (+9.1214755261e-01) * rollDeg [deg]^2
+  + (-1.0749540976e+03) * rollDeg [deg] * invGap
+  + (-1.7435331556e+02) * invGap^2
+  + (+1.3682740756e-03) * currL [A]^3
+  + (+1.9533070101e-03) * currL [A]^2 * currR [A]
+  + (+1.9657240805e-02) * currL [A]^2 * rollDeg [deg]
+  + (+2.0525258396e+00) * currL [A]^2 * invGap
+  + (-2.0087168696e-03) * currL [A] * currR [A]^2
+  + (-7.7704180912e-03) * currL [A] * currR [A] * rollDeg [deg]
+  + (+4.6783332660e-01) * currL [A] * currR [A] * invGap
+  + (-1.5697787523e-01) * currL [A] * rollDeg [deg]^2
+  + (-2.5279026405e+01) * currL [A] * rollDeg [deg] * invGap
+  + (-2.6796288784e+03) * currL [A] * invGap^2
+  + (-6.9397567186e-04) * currR [A]^3
+  + (+1.9657238531e-02) * currR [A]^2 * rollDeg [deg]
+  + (-3.1136966908e+00) * currR [A]^2 * invGap
+  + (+1.8298169417e-01) * currR [A] * rollDeg [deg]^2
+  + (-2.5279027176e+01) * currR [A] * rollDeg [deg] * invGap
+  + (+2.5386184669e+03) * currR [A] * invGap^2
+  + (+6.2974733858e-01) * rollDeg [deg]^3
+  + (-1.3210284466e+01) * rollDeg [deg]^2 * invGap
+  + (+4.7007171607e+04) * rollDeg [deg] * invGap^2
+  + (-3.3555302551e+02) * invGap^3
+  + (-1.4305035722e-04) * currL [A]^4
+  + (-1.6602474226e-05) * currL [A]^3 * currR [A]
+  + (-1.2886823540e-04) * currL [A]^3 * rollDeg [deg]
+  + (+6.0143039665e-03) * currL [A]^3 * invGap
+  + (+1.2951511025e-05) * currL [A]^2 * currR [A]^2
+  + (-5.1776437670e-04) * currL [A]^2 * currR [A] * rollDeg [deg]
+  + (-3.8569371878e-02) * currL [A]^2 * currR [A] * invGap
+  + (+5.2166822420e-03) * currL [A]^2 * rollDeg [deg]^2
+  + (-6.2117182881e-01) * currL [A]^2 * rollDeg [deg] * invGap
+  + (+9.0620919904e+01) * currL [A]^2 * invGap^2
+  + (+1.3270592660e-06) * currL [A] * currR [A]^3
+  + (-5.1776417343e-04) * currL [A] * currR [A]^2 * rollDeg [deg]
+  + (+4.2265553856e-02) * currL [A] * currR [A]^2 * invGap
+  + (-2.2041148798e-04) * currL [A] * currR [A] * rollDeg [deg]^2
+  + (+2.4509139646e-01) * currL [A] * currR [A] * rollDeg [deg] * invGap
+  + (-4.9160159525e+00) * currL [A] * currR [A] * invGap^2
+  + (-1.7295894521e-01) * currL [A] * rollDeg [deg]^3
+  + (-6.7494817486e+00) * currL [A] * rollDeg [deg]^2 * invGap
+  + (-8.6427297569e+02) * currL [A] * rollDeg [deg] * invGap^2
+  + (+8.5965909925e+03) * currL [A] * invGap^3
+  + (-1.6550913550e-05) * currR [A]^4
+  + (-1.2886821877e-04) * currR [A]^3 * rollDeg [deg]
+  + (-3.0326211668e-02) * currR [A]^3 * invGap
+  + (-5.1175783571e-03) * currR [A]^2 * rollDeg [deg]^2
+  + (-6.2117181767e-01) * currR [A]^2 * rollDeg [deg] * invGap
+  + (-7.5004948389e+01) * currR [A]^2 * invGap^2
+  + (-1.7295894543e-01) * currR [A] * rollDeg [deg]^3
+  + (+5.7289182157e+00) * currR [A] * rollDeg [deg]^2 * invGap
+  + (-8.6427297453e+02) * currR [A] * rollDeg [deg] * invGap^2
+  + (-8.1554262787e+03) * currR [A] * invGap^3
+  + (-8.0890042154e-02) * rollDeg [deg]^4
+  + (+1.7462417614e+02) * rollDeg [deg]^3 * invGap
+  + (+5.9548102453e+01) * rollDeg [deg]^2 * invGap^2
+  + (-9.1016550502e+04) * rollDeg [deg] * invGap^3
+  + (-1.2462037728e+02) * invGap^4
+  + (-1.2219304153e-05) * currL [A]^5
+  + (-6.3133366268e-06) * currL [A]^4 * currR [A]
+  + (+5.1514166444e-07) * currL [A]^4 * rollDeg [deg]
+  + (+1.1879557083e-03) * currL [A]^4 * invGap
+  + (-1.0954778098e-06) * currL [A]^3 * currR [A]^2
+  + (-5.8420851161e-06) * currL [A]^3 * currR [A] * rollDeg [deg]
+  + (+2.5831185234e-03) * currL [A]^3 * currR [A] * invGap
+  + (+7.9254089698e-05) * currL [A]^3 * rollDeg [deg]^2
+  + (-1.7220995748e-03) * currL [A]^3 * rollDeg [deg] * invGap
+  + (-4.0028155701e-01) * currL [A]^3 * invGap^2
+  + (+1.7079834365e-06) * currL [A]^2 * currR [A]^3
+  + (-7.8935650691e-06) * currL [A]^2 * currR [A]^2 * rollDeg [deg]
+  + (-3.2330488590e-04) * currL [A]^2 * currR [A]^2 * invGap
+  + (+9.9753661971e-05) * currL [A]^2 * currR [A] * rollDeg [deg]^2
+  + (+7.2169993632e-03) * currL [A]^2 * currR [A] * rollDeg [deg] * invGap
+  + (+5.4494940800e-01) * currL [A]^2 * currR [A] * invGap^2
+  + (-1.5381149512e-03) * currL [A]^2 * rollDeg [deg]^3
+  + (-1.9907607357e-01) * currL [A]^2 * rollDeg [deg]^2 * invGap
+  + (+1.0517964842e+01) * currL [A]^2 * rollDeg [deg] * invGap^2
+  + (-5.9716223372e+02) * currL [A]^2 * invGap^3
+  + (+5.7682329953e-06) * currL [A] * currR [A]^4
+  + (-5.8420830129e-06) * currL [A] * currR [A]^3 * rollDeg [deg]
+  + (-3.1387669824e-03) * currL [A] * currR [A]^3 * invGap
+  + (-9.2627696858e-05) * currL [A] * currR [A]^2 * rollDeg [deg]^2
+  + (+7.2169983158e-03) * currL [A] * currR [A]^2 * rollDeg [deg] * invGap
+  + (-5.4112374537e-01) * currL [A] * currR [A]^2 * invGap^2
+  + (-3.1504005406e-05) * currL [A] * currR [A] * rollDeg [deg]^3
+  + (-1.7005015703e-04) * currL [A] * currR [A] * rollDeg [deg]^2 * invGap
+  + (-2.3976914010e+00) * currL [A] * currR [A] * rollDeg [deg] * invGap^2
+  + (+2.0162876449e+01) * currL [A] * currR [A] * invGap^3
+  + (+3.0541236561e-02) * currL [A] * rollDeg [deg]^4
+  + (+6.0909890705e+00) * currL [A] * rollDeg [deg]^3 * invGap
+  + (+1.8686476537e+02) * currL [A] * rollDeg [deg]^2 * invGap^2
+  + (+5.4569961037e+03) * currL [A] * rollDeg [deg] * invGap^3
+  + (+3.6521334233e+03) * currL [A] * invGap^4
+  + (+1.2356741024e-05) * currR [A]^5
+  + (+5.1514541610e-07) * currR [A]^4 * rollDeg [deg]
+  + (-3.2093123475e-04) * currR [A]^4 * invGap
+  + (-9.5040930219e-05) * currR [A]^3 * rollDeg [deg]^2
+  + (-1.7221002130e-03) * currR [A]^3 * rollDeg [deg] * invGap
+  + (+6.5615872016e-01) * currR [A]^3 * invGap^2
+  + (-1.5381149487e-03) * currR [A]^2 * rollDeg [deg]^3
+  + (+2.0395948760e-01) * currR [A]^2 * rollDeg [deg]^2 * invGap
+  + (+1.0517964822e+01) * currR [A]^2 * rollDeg [deg] * invGap^2
+  + (+4.9837046412e+02) * currR [A]^2 * invGap^3
+  + (-3.0694304201e-02) * currR [A] * rollDeg [deg]^4
+  + (+6.0909890702e+00) * currR [A] * rollDeg [deg]^3 * invGap
+  + (-1.7712281328e+02) * currR [A] * rollDeg [deg]^2 * invGap^2
+  + (+5.4569961045e+03) * currR [A] * rollDeg [deg] * invGap^3
+  + (-3.4643372364e+03) * currR [A] * invGap^4
+  + (-3.1967283950e-01) * rollDeg [deg]^5
+  + (+7.2465373581e-01) * rollDeg [deg]^4 * invGap
+  + (-3.7694440105e+03) * rollDeg [deg]^3 * invGap^2
+  + (+4.4429019352e+01) * rollDeg [deg]^2 * invGap^3
+  + (-3.9730669147e+04) * rollDeg [deg] * invGap^4
+  + (-3.1813627757e+01) * invGap^5
+  + (+2.0551811986e-07) * currL [A]^6
+  + (-2.2810121436e-07) * currL [A]^5 * currR [A]
+  + (-1.3383146324e-07) * currL [A]^5 * rollDeg [deg]
+  + (+1.6049756900e-04) * currL [A]^5 * invGap
+  + (-5.6453359321e-07) * currL [A]^4 * currR [A]^2
+  + (+2.6031671041e-07) * currL [A]^4 * currR [A] * rollDeg [deg]
+  + (+1.2744387021e-05) * currL [A]^4 * currR [A] * invGap
+  + (+2.8978174669e-06) * currL [A]^4 * rollDeg [deg]^2
+  + (-9.3438872511e-05) * currL [A]^4 * rollDeg [deg] * invGap
+  + (-3.2491823205e-03) * currL [A]^4 * invGap^2
+  + (+3.7946676912e-09) * currL [A]^3 * currR [A]^3
+  + (+1.7599444391e-07) * currL [A]^3 * currR [A]^2 * rollDeg [deg]
+  + (+2.4965108992e-05) * currL [A]^3 * currR [A]^2 * invGap
+  + (+1.1286476678e-06) * currL [A]^3 * currR [A] * rollDeg [deg]^2
+  + (+4.5300600434e-05) * currL [A]^3 * currR [A] * rollDeg [deg] * invGap
+  + (-1.5200582693e-02) * currL [A]^3 * currR [A] * invGap^2
+  + (+2.7490628440e-06) * currL [A]^3 * rollDeg [deg]^3
+  + (-8.2493098857e-04) * currL [A]^3 * rollDeg [deg]^2 * invGap
+  + (+2.3944496913e-02) * currL [A]^3 * rollDeg [deg] * invGap^2
+  + (+1.2946953968e+00) * currL [A]^3 * invGap^3
+  + (+5.9211265580e-07) * currL [A]^2 * currR [A]^4
+  + (+1.7599464286e-07) * currL [A]^2 * currR [A]^3 * rollDeg [deg]
+  + (-3.7773169680e-05) * currL [A]^2 * currR [A]^3 * invGap
+  + (-7.7324017411e-08) * currL [A]^2 * currR [A]^2 * rollDeg [deg]^2
+  + (+1.6224376321e-04) * currL [A]^2 * currR [A]^2 * rollDeg [deg] * invGap
+  + (+1.1125393841e-03) * currL [A]^2 * currR [A]^2 * invGap^2
+  + (-1.8213825115e-08) * currL [A]^2 * currR [A] * rollDeg [deg]^3
+  + (-1.1582951117e-03) * currL [A]^2 * currR [A] * rollDeg [deg]^2 * invGap
+  + (-2.7423615740e-02) * currL [A]^2 * currR [A] * rollDeg [deg] * invGap^2
+  + (-1.8375761343e+00) * currL [A]^2 * currR [A] * invGap^3
+  + (+1.8148082155e-05) * currL [A]^2 * rollDeg [deg]^4
+  + (+2.5582361106e-02) * currL [A]^2 * rollDeg [deg]^3 * invGap
+  + (+1.8719567169e+00) * currL [A]^2 * rollDeg [deg]^2 * invGap^2
+  + (-7.9375540256e+00) * currL [A]^2 * rollDeg [deg] * invGap^3
+  + (+1.3851610060e+03) * currL [A]^2 * invGap^4
+  + (+3.6572413364e-07) * currL [A] * currR [A]^5
+  + (+2.6031864309e-07) * currL [A] * currR [A]^4 * rollDeg [deg]
+  + (-1.3740560576e-05) * currL [A] * currR [A]^4 * invGap
+  + (-1.1634704791e-06) * currL [A] * currR [A]^3 * rollDeg [deg]^2
+  + (+4.5300591111e-05) * currL [A] * currR [A]^3 * rollDeg [deg] * invGap
+  + (+1.7827349035e-02) * currL [A] * currR [A]^3 * invGap^2
+  + (-1.8220930542e-08) * currL [A] * currR [A]^2 * rollDeg [deg]^3
+  + (+1.0311063391e-03) * currL [A] * currR [A]^2 * rollDeg [deg]^2 * invGap
+  + (-2.7423615867e-02) * currL [A] * currR [A]^2 * rollDeg [deg] * invGap^2
+  + (+1.8202040056e+00) * currL [A] * currR [A]^2 * invGap^3
+  + (+1.4693588980e-05) * currL [A] * currR [A] * rollDeg [deg]^4
+  + (+2.0391970869e-03) * currL [A] * currR [A] * rollDeg [deg]^3 * invGap
+  + (-5.1289752136e-03) * currL [A] * currR [A] * rollDeg [deg]^2 * invGap^2
+  + (+1.3585046026e+01) * currL [A] * currR [A] * rollDeg [deg] * invGap^3
+  + (-2.5312909994e+01) * currL [A] * currR [A] * invGap^4
+  + (-1.2892918352e-03) * currL [A] * rollDeg [deg]^5
+  + (-4.2744856185e-01) * currL [A] * rollDeg [deg]^4 * invGap
+  + (-4.5230140146e+01) * currL [A] * rollDeg [deg]^3 * invGap^2
+  + (-1.2691925261e+03) * currL [A] * rollDeg [deg]^2 * invGap^3
+  + (-1.7946912044e+04) * currL [A] * rollDeg [deg] * invGap^4
+  + (+9.8200368161e+02) * currL [A] * invGap^5
+  + (+1.4402604620e-07) * currR [A]^6
+  + (-1.3383078112e-07) * currR [A]^5 * rollDeg [deg]
+  + (-1.5877721700e-04) * currR [A]^5 * invGap
+  + (-1.8463799734e-06) * currR [A]^4 * rollDeg [deg]^2
+  + (-9.3438911534e-05) * currR [A]^4 * rollDeg [deg] * invGap
+  + (-2.0062450751e-03) * currR [A]^4 * invGap^2
+  + (+2.7490636967e-06) * currR [A]^3 * rollDeg [deg]^3
+  + (+1.0293575893e-03) * currR [A]^3 * rollDeg [deg]^2 * invGap
+  + (+2.3944496992e-02) * currR [A]^3 * rollDeg [deg] * invGap^2
+  + (-2.1505766179e+00) * currR [A]^3 * invGap^3
+  + (-4.8050087258e-05) * currR [A]^2 * rollDeg [deg]^4
+  + (+2.5582361094e-02) * currR [A]^2 * rollDeg [deg]^3 * invGap
+  + (-1.8925775930e+00) * currR [A]^2 * rollDeg [deg]^2 * invGap^2
+  + (-7.9375540232e+00) * currR [A]^2 * rollDeg [deg] * invGap^3
+  + (-1.1457282555e+03) * currR [A]^2 * invGap^4
+  + (-1.2892918417e-03) * currR [A] * rollDeg [deg]^5
+  + (+4.3570132351e-01) * currR [A] * rollDeg [deg]^4 * invGap
+  + (-4.5230140146e+01) * currR [A] * rollDeg [deg]^3 * invGap^2
+  + (+1.2356182202e+03) * currR [A] * rollDeg [deg]^2 * invGap^3
+  + (-1.7946912045e+04) * currR [A] * rollDeg [deg] * invGap^4
+  + (-9.3157391357e+02) * currR [A] * invGap^5
+  + (+1.9887971069e-03) * rollDeg [deg]^6
+  + (+4.1532416818e+00) * rollDeg [deg]^5 * invGap
+  + (-3.7128109697e+00) * rollDeg [deg]^4 * invGap^2
+  + (+1.9150570779e+04) * rollDeg [deg]^3 * invGap^3
+  + (+1.9562107621e+01) * rollDeg [deg]^2 * invGap^4
+  + (-1.0765823661e+04) * rollDeg [deg] * invGap^5
+  + (-6.8540115783e+00) * invGap^6
