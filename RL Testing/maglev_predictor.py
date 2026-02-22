@@ -14,17 +14,22 @@ import numpy as np
 import joblib
 import os
 
+# Default path: next to this module so it works regardless of cwd
+_DEFAULT_MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "maglev_model.pkl")
+
+
 class MaglevPredictor:
-    def __init__(self, model_path='maglev_model.pkl'):
+    def __init__(self, model_path=None):
         """
         Initialize predictor by loading the pickle file and extracting
         raw matrices for fast inference.
         """
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file '{model_path}' not found. Please train and save the model first.")
+        path = model_path if model_path is not None else _DEFAULT_MODEL_PATH
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Model file '{path}' not found. Please train and save the model first.")
 
-        print(f"Loading maglev model from {model_path}...")
-        data = joblib.load(model_path)
+        print(f"Loading maglev model from {path}...")
+        data = joblib.load(path)
         
         # 1. Extract Scikit-Learn Objects
         poly_transformer = data['poly_features']
