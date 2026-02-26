@@ -58,7 +58,7 @@ float IndSensor::readMM() {
 }
 
 // Predefined sensor instances
-IndSensor indL(ind1Map, A0);
-IndSensor indR(ind0Map, A1);
-IndSensor indF(ind3Map, A5);
-IndSensor indB(ind2Map, A4);
+IndSensor indF(ind1Map, A0);
+IndSensor indB(ind0Map, A1);
+IndSensor indR(ind3Map, A5);
+IndSensor indL(ind2Map, A4);

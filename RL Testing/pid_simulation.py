@@ -14,7 +14,7 @@ _FF_PWM_LUT = None
 
 
 def build_feedforward_lut(
-    pod_mass: float = 5.8,
+    pod_mass: float = 9.4,
     coil_r: float = 1.1,
     v_supply: float = 12.0,
     gap_min: float = 3.0,

@@ -217,7 +217,7 @@ class MaglevStateSpace:
     """
 
     def __init__(self, linearizer,
-                 mass=5.8,
+                 mass=9.4,
                  I_roll=0.0192942414,     # Ixx from pod.xml [kg·m²]
                  I_pitch=0.130582305,     # Iyy from pod.xml [kg·m²]
                  coil_R=1.1,              # from MagLevCoil in lev_pod_env.py

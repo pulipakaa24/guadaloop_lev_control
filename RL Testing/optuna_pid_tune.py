@@ -27,7 +27,7 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Default optimization config: long enough to see late instability (~8s+), not so long that optimizer goes ultra-conservative
 DEFAULT_MAX_STEPS = 1500
-DEFAULT_INITIAL_GAPS_MM = [12.0, 18.0]  # Two conditions for robustness
+DEFAULT_INITIAL_GAPS_MM = [8.0, 15.0]  # Two conditions for robustness (bracket 11.86mm target)
 DEFAULT_N_TRIALS = 200
 DEFAULT_TIMEOUT_S = 3600
 TARGET_GAP_MM = TARGET_GAP * 1000

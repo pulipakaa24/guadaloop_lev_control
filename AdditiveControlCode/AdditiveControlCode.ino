@@ -4,43 +4,40 @@
 #include "ADC.hpp"
 #include "FastPWM.hpp"
 
-// K, Ki, Kd Constants
-Constants repelling = {250, 0, 1000};
-Constants attracting = {250, 0, 1000};
+// ── PID Gains (Kp, Ki, Kd) ──────────────────────────────────
+// Height loop: controls average gap → additive PWM on all coils
+PIDGains heightGains = { 100.0f, 0.0f, 8.0f };
 
-Constants RollLeftUp = {0, 0, 100};
-Constants RollLeftDown = {0, 0, 100};
+// Roll loop: corrects left/right tilt → differential L/R
+PIDGains rollGains   = { 0.6f, 0.0f, -0.1f };
 
-Constants RollFrontUp = {0, 0, 500};
-Constants RollFrontDown = {0, 0, 500};
+// Pitch loop: corrects front/back tilt → differential F/B
+PIDGains pitchGains  = { 50.0f, 0.0f, 1.9f };
 
-// Reference values for average dist, 
-float avgRef = 11.0; // TBD: what is our equilibrium height with this testrig?
-float LRDiffRef = -2.0; // TBD: what is our left-right balance equilibrium? Positive -> left is above right
-float FBDiffRef = 0.0; // TBD: what is front-back balance equilibrium? Positive -> front above back.
+// ── Reference ────────────────────────────────────────────────
+float avgRef = 12.36f;  // Target gap height (mm) — 9.4 kg equilibrium
 
-// Might be useful for things like jitter or lag.
-#define sampling_rate 1000 // Hz
+// ── Feedforward ──────────────────────────────────────────────
+bool useFeedforward = true;  // Set false to disable feedforward LUT
 
-// EMA filter alpha value (all sensors use same alpha)
-#define alphaVal 0.3f
+// ── Sampling ─────────────────────────────────────────────────
+#define SAMPLING_RATE 200  // Hz (controller tick rate)
 
+// ── EMA filter alpha (all sensors) ───────────────────────────
+#define ALPHA_VAL 1.0f
+
+// ═══════════════════════════════════════════════════════════════
 // ABOVE THIS LINE IS TUNING VALUES ONLY, BELOW IS ACTUAL CODE.
+// ═══════════════════════════════════════════════════════════════
 
 unsigned long tprior;
 unsigned int tDiffMicros;
 
-FullConsts fullConsts = {
-  {repelling, attracting},
-  {RollLeftDown, RollLeftUp},
-  {RollFrontDown, RollFrontUp}
-};
+FullController controller(indL, indR, indF, indB,
+                          heightGains, rollGains, pitchGains,
+                          avgRef, useFeedforward);
 
-FullController controller(indL, indR, indF, indB, fullConsts, avgRef, LRDiffRef, FBDiffRef);
-
-const int dt_micros = 1e6/sampling_rate;
-
-#define LEV_ON
+const int dt_micros = 1000000 / SAMPLING_RATE;
 
 int ON = 0;
 
@@ -49,10 +46,10 @@ void setup() {
   setupADC();
   setupFastPWM();
 
-  indL.alpha = alphaVal;
-  indR.alpha = alphaVal;
-  indF.alpha = alphaVal;
-  indB.alpha = alphaVal;
+  indL.alpha = ALPHA_VAL;
+  indR.alpha = ALPHA_VAL;
+  indF.alpha = ALPHA_VAL;
+  indB.alpha = ALPHA_VAL;
 
   tprior = micros();
 
@@ -71,106 +68,72 @@ void loop() {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
     
-    // Check if it's a reference update command (format: REF,avgRef,lrDiffRef,fbDiffRef)
+    // REF,avgRef — update target gap height
     if (cmd.startsWith("REF,")) {
-      int firstComma = cmd.indexOf(',');
-      int secondComma = cmd.indexOf(',', firstComma + 1);
-      int thirdComma = cmd.indexOf(',', secondComma + 1);
-      
-      if (firstComma > 0 && secondComma > 0 && thirdComma > 0) {
-        float newAvgRef = cmd.substring(firstComma + 1, secondComma).toFloat();
-        float newLRDiffRef = cmd.substring(secondComma + 1, thirdComma).toFloat();
-        float newFBDiffRef = cmd.substring(thirdComma + 1).toFloat();
-        
-        avgRef = newAvgRef;
-        LRDiffRef = newLRDiffRef;
-        FBDiffRef = newFBDiffRef;
-        
-        controller.updateReferences(avgRef, LRDiffRef, FBDiffRef);
-        Serial.print("Updated References: Avg=");
-        Serial.print(avgRef);
-        Serial.print(", LR=");
-        Serial.print(LRDiffRef);
-        Serial.print(", FB=");
-        Serial.println(FBDiffRef);
-      }
+      float newRef = cmd.substring(4).toFloat();
+      avgRef = newRef;
+      controller.updateReference(avgRef);
+      Serial.print("Updated Ref: ");
+      Serial.println(avgRef);
     }
-    // Check if it's a PID tuning command (format: PID,mode,kp,ki,kd)
+    // PID,loop,kp,ki,kd — update gains (loop: 0=height, 1=roll, 2=pitch)
     else if (cmd.startsWith("PID,")) {
-      int firstComma = cmd.indexOf(',');
-      int secondComma = cmd.indexOf(',', firstComma + 1);
-      int thirdComma = cmd.indexOf(',', secondComma + 1);
-      int fourthComma = cmd.indexOf(',', thirdComma + 1);
+      int c1 = cmd.indexOf(',');
+      int c2 = cmd.indexOf(',', c1 + 1);
+      int c3 = cmd.indexOf(',', c2 + 1);
+      int c4 = cmd.indexOf(',', c3 + 1);
       
-      if (firstComma > 0 && secondComma > 0 && thirdComma > 0 && fourthComma > 0) {
-        int mode = cmd.substring(firstComma + 1, secondComma).toInt();
-        float kp = cmd.substring(secondComma + 1, thirdComma).toFloat();
-        float ki = cmd.substring(thirdComma + 1, fourthComma).toFloat();
-        float kd = cmd.substring(fourthComma + 1).toFloat();
+      if (c1 > 0 && c2 > 0 && c3 > 0 && c4 > 0) {
+        int loop = cmd.substring(c1 + 1, c2).toInt();
+        float kp  = cmd.substring(c2 + 1, c3).toFloat();
+        float ki  = cmd.substring(c3 + 1, c4).toFloat();
+        float kd  = cmd.substring(c4 + 1).toFloat();
         
-        Constants newConst = {kp, ki, kd};
+        PIDGains g = { kp, ki, kd };
         
-        // Mode mapping:
-        // 0: Repelling
-        // 1: Attracting
-        // 2: RollLeftDown
-        // 3: RollLeftUp
-        // 4: RollFrontDown
-        // 5: RollFrontUp
-        
-        switch(mode) {
-          case 0: // Repelling
-            repelling = newConst;
-            controller.updateAvgPID(repelling, attracting);
-            Serial.println("Updated Repelling PID");
+        switch (loop) {
+          case 0:
+            heightGains = g;
+            controller.updateHeightPID(g);
+            Serial.println("Updated Height PID");
             break;
-          case 1: // Attracting
-            attracting = newConst;
-            controller.updateAvgPID(repelling, attracting);
-            Serial.println("Updated Attracting PID");
+          case 1:
+            rollGains = g;
+            controller.updateRollPID(g);
+            Serial.println("Updated Roll PID");
             break;
-          case 2: // RollLeftDown
-            RollLeftDown = newConst;
-            controller.updateLRPID(RollLeftDown, RollLeftUp);
-            Serial.println("Updated RollLeftDown PID");
-            break;
-          case 3: // RollLeftUp
-            RollLeftUp = newConst;
-            controller.updateLRPID(RollLeftDown, RollLeftUp);
-            Serial.println("Updated RollLeftUp PID");
-            break;
-          case 4: // RollFrontDown
-            RollFrontDown = newConst;
-            controller.updateFBPID(RollFrontDown, RollFrontUp);
-            Serial.println("Updated RollFrontDown PID");
-            break;
-          case 5: // RollFrontUp
-            RollFrontUp = newConst;
-            controller.updateFBPID(RollFrontDown, RollFrontUp);
-            Serial.println("Updated RollFrontUp PID");
+          case 2:
+            pitchGains = g;
+            controller.updatePitchPID(g);
+            Serial.println("Updated Pitch PID");
             break;
           default:
-            Serial.println("Invalid mode");
+            Serial.println("Invalid loop (0=height, 1=roll, 2=pitch)");
             break;
         }
       }
-    } else {
-      // Original control on/off command
+    }
+    // FF,0 or FF,1 — toggle feedforward
+    else if (cmd.startsWith("FF,")) {
+      bool en = (cmd.charAt(3) != '0');
+      useFeedforward = en;
+      controller.setFeedforward(en);
+      Serial.print("Feedforward: ");
+      Serial.println(en ? "ON" : "OFF");
+    }
+    else {
+      // Original on/off command (any char except '0' turns on)
       controller.outputOn = (cmd.charAt(0) != '0');
     }
   }
   
   tDiffMicros = micros() - tprior;
 
-  if (tDiffMicros >= dt_micros){
+  if (tDiffMicros >= dt_micros) {
     controller.update();
     controller.report();
-    controller.sendOutputs(); 
-    // this and the previous line can be switched if you want the PWMs to display 0 when controller off.
+    controller.sendOutputs();
     
-    tprior = micros(); // maybe we have to move this line to before the update commands?
-    // since the floating point arithmetic may take a while...
+    tprior = micros();
   }
-
-  //Serial.println(telapsed);
 }

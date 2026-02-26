@@ -8,7 +8,7 @@ from datetime import datetime
 from mag_lev_coil import MagLevCoil
 from maglev_predictor import MaglevPredictor
 
-TARGET_GAP = 16.491741 / 1000 # target gap height for 5.8 kg pod in meters
+TARGET_GAP = 11.86 / 1000 # target gap height for 9.4 kg pod in meters
 
 class LevPodEnv(gym.Env):
     def __init__(self, use_gui=False, initial_gap_mm=10.0, max_steps=2000, disturbance_force_std=0.0,
@@ -385,8 +385,8 @@ class LevPodEnv(gym.Env):
         obs = self._get_obs()
         
         # --- 8. Calculate Reward ---
-        # Goal: Hover at target gap (16.5mm), minimize roll/pitch, minimize power
-        target_gap = TARGET_GAP  # 16.5mm in meters
+        # Goal: Hover at target gap (11.8mm), minimize roll/pitch, minimize power
+        target_gap = TARGET_GAP  # 11.8mm in meters
         avg_gap = (avg_gap_front + avg_gap_back) / 2
         
         gap_error = abs(avg_gap - target_gap)
@@ -656,7 +656,7 @@ class LevPodEnv(gym.Env):
         t = {k: np.array(v) for k, v in self._telemetry.items()}
         time = t['time']
         target_mm = TARGET_GAP * 1000
-        weight = 5.8 * 9.81  # Pod weight in N
+        weight = 9.4 * 9.81  # Pod weight in N
 
         fig, axes = plt.subplots(4, 1, figsize=(12, 14), sharex=True)
         fig.suptitle(f'Simulation Telemetry  |  gap₀={self.initial_gap_mm}mm  target={target_mm:.1f}mm',
